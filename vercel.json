@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-ngrok-url.ngrok-free.app/api/:path*"
+      "destination": "https://your-actual-ngrok-id.ngrok-free.app/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
