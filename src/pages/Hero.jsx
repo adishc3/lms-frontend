@@ -379,7 +379,7 @@ const InteractiveHero = () => {
             <nav className="flex justify-between items-center max-w-screen-xl mx-auto h-[70px]">
                 <div className="flex items-center flex-shrink-0 cursor-pointer" onClick={() => navigate("/")}>
                     <ShieldCheck className="w-8 h-8 text-[#60A5FA]" />
-                    <span className="text-xl font-bold text-white ml-2">BeginnerLMS</span>
+                    <span className="text-xl font-bold text-white ml-2">Learn@will</span>
                 </div>
 
                 <div className="hidden md:flex items-center space-x-8">

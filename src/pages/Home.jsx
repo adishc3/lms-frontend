@@ -111,7 +111,7 @@ export default function Home() {
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
             <ShieldCheck className="w-7 h-7 text-[#60A5FA]" />
-            <span className="text-xl font-bold">BeginnerLMS</span>
+            <span className="text-xl font-bold">Learn@will</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-8">
