@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { Users, ClipboardList, PlusCircle, Download, BookOpen } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function CourseStudents() {
   const { courseId } = useParams()
@@ -29,9 +30,9 @@ export default function CourseStudents() {
     const load = async () => {
       try {
         const [courseRes, assignRes, quizRes] = await Promise.all([
-          fetch(`/api/courses/${courseId}`),
-          fetch(`/api/assignments/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`/api/quizzes/course/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch(`/api/courses/${courseId}`),
+          apiFetch(`/api/assignments/courses/${courseId}`),
+          apiFetch(`/api/quizzes/course/${courseId}`),
         ])
         if (courseRes.ok) setCourse(await courseRes.json())
         if (assignRes.ok) setAssignments(await assignRes.json())
@@ -57,9 +58,9 @@ export default function CourseStudents() {
         due_date: assignForm.due_date ? new Date(assignForm.due_date).toISOString() : null,
         max_score: assignForm.max_score ? Number(assignForm.max_score) : null,
       }
-      const res = await fetch(`/api/assignments/courses/${courseId}`, {
+      const res = await apiFetch(`/api/assignments/courses/${courseId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
       const data = await res.json()
@@ -125,9 +126,9 @@ export default function CourseStudents() {
         course_id: Number(courseId),
         questions: quizForm.questions,
       }
-      const res = await fetch("/api/quizzes/", {
+      const res = await apiFetch("/api/quizzes/", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
       const data = await res.json()

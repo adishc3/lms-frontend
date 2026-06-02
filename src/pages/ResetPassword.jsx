@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import apiFetch from "@/lib/api"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,7 +23,7 @@ export default function ResetPassword() {
     setError("")
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/password-reset/confirm", {
+      const res = await apiFetch("/api/auth/password-reset/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: password }),

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Upload, FileText, Image, Video, Music } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function AddLesson() {
   const { courseId } = useParams()
@@ -27,8 +28,8 @@ export default function AddLesson() {
 
       try {
         const [meRes, courseRes] = await Promise.all([
-          fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`/api/courses/${courseId}`),
+          apiFetch("/api/auth/me"),
+          apiFetch(`/api/courses/${courseId}`),
         ])
 
         if (!meRes.ok) {
@@ -80,11 +81,10 @@ export default function AddLesson() {
 
     try {
       // Step 1: Create the lesson
-      const lessonRes = await fetch(`/api/courses/${courseId}/lessons`, {
+      const lessonRes = await apiFetch(`/api/courses/${courseId}/lessons`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ title, content }),
       })
@@ -99,9 +99,8 @@ export default function AddLesson() {
         const formData = new FormData()
         formData.append("file", file)
 
-        const uploadRes = await fetch(`/api/courses/${courseId}/lessons/${lessonData.id}/upload`, {
+        const uploadRes = await apiFetch(`/api/courses/${courseId}/lessons/${lessonData.id}/upload`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
           body: formData,
         })
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import apiFetch from "@/lib/api"
 
 export default function CreateCourse() {
   const navigate = useNavigate()
@@ -20,9 +21,7 @@ export default function CreateCourse() {
         return
       }
 
-      const response = await fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await apiFetch("/api/auth/me")
       if (!response.ok) {
         navigate("/login")
         return
@@ -46,11 +45,10 @@ export default function CreateCourse() {
 
     try {
       const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
-      const response = await fetch("/api/courses/", {
+      const response = await apiFetch("/api/courses/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ title, description }),
       })

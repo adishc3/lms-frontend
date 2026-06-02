@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { ClipboardList, Upload, CheckCircle, Clock, AlertCircle } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function Assignments() {
   const { courseId } = useParams()
@@ -27,8 +28,8 @@ export default function Assignments() {
     const load = async () => {
       try {
         const [courseRes, assignRes] = await Promise.all([
-          fetch(`/api/courses/${courseId}`),
-          fetch(`/api/assignments/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch(`/api/courses/${courseId}`),
+          apiFetch(`/api/assignments/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
         if (courseRes.ok) setCourse(await courseRes.json())
         if (!assignRes.ok) {
@@ -44,7 +45,7 @@ export default function Assignments() {
         await Promise.all(
           assignData.map(async (a) => {
             try {
-              const res = await fetch(`/api/assignments/${a.id}/my-submission`, {
+              const res = await apiFetch(`/api/assignments/${a.id}/my-submission`, {
                 headers: { Authorization: `Bearer ${token}` },
               })
               if (res.ok) {
@@ -78,7 +79,7 @@ export default function Assignments() {
       if (submitContent) formData.append("content", submitContent)
       if (submitFile) formData.append("file", submitFile)
 
-      const res = await fetch(`/api/assignments/${activeAssignment.id}/submit`, {
+      const res = await apiFetch(`/api/assignments/${activeAssignment.id}/submit`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

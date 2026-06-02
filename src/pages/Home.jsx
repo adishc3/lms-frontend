@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ShieldCheck, BookOpen, GraduationCap, Trophy, LogOut, Layout, PlusCircle } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function Home() {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ export default function Home() {
       }
 
       try {
-        const userRes = await fetch("/api/auth/me", {
+        const userRes = await apiFetch("/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` }
         })
 
@@ -35,7 +36,7 @@ export default function Home() {
         setUser(userData)
 
         if (userData.role === "student") {
-          const coursesRes = await fetch("/api/courses/my/courses", {
+          const coursesRes = await apiFetch("/api/courses/my/courses", {
             headers: { Authorization: `Bearer ${token}` }
           })
 
@@ -43,7 +44,7 @@ export default function Home() {
             const coursesData = await coursesRes.json()
             const coursesWithProgress = await Promise.all(coursesData.map(async (course) => {
               try {
-                const progressRes = await fetch(`/api/courses/${course.id}/progress`, {
+                const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, {
                   headers: { Authorization: `Bearer ${token}` }
                 })
                 const progress = progressRes.ok ? await progressRes.json() : { percent: 0, completed: 0, total_lessons: 0 }
@@ -60,7 +61,7 @@ export default function Home() {
             setCourses(coursesWithProgress)
           }
         } else {
-          const coursesRes = await fetch("/api/courses/", {
+          const coursesRes = await apiFetch("/api/courses/", {
             headers: { Authorization: `Bearer ${token}` }
           })
           if (coursesRes.ok) {

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { Award, Download, ExternalLink, CheckCircle } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function Certificates() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export default function Certificates() {
 
   useEffect(() => {
     if (!token) { navigate("/login"); return }
-    fetch("/api/certificates/my", { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch("/api/certificates/my", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : Promise.reject("Failed to load certificates"))
       .then(setCertificates)
       .catch((e) => setError(typeof e === "string" ? e : "Unable to load certificates"))
@@ -31,7 +32,7 @@ export default function Certificates() {
     setVerifying(true)
     setVerifyResult(null)
     try {
-      const res = await fetch(`/api/certificates/verify/${verifyId.trim()}`)
+      const res = await apiFetch(`/api/certificates/verify/${verifyId.trim()}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || "Certificate not found")
       setVerifyResult({ valid: true, ...data })

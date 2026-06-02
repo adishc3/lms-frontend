@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { CheckCircle, XCircle, ChevronRight, Trophy } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function Quizzes() {
   const { courseId } = useParams()
@@ -24,8 +25,8 @@ export default function Quizzes() {
     const load = async () => {
       try {
         const [courseRes, quizzesRes] = await Promise.all([
-          fetch(`/api/courses/${courseId}`),
-          fetch(`/api/quizzes/course/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
+          apiFetch(`/api/courses/${courseId}`),
+          apiFetch(`/api/quizzes/course/${courseId}`),
         ])
         if (courseRes.ok) setCourse(await courseRes.json())
         if (quizzesRes.ok) setQuizzes(await quizzesRes.json())
@@ -68,9 +69,9 @@ export default function Quizzes() {
           selected_option_id: Number(selected_option_id),
         })),
       }
-      const res = await fetch(`/api/quizzes/${activeQuiz.id}/attempts`, {
+      const res = await apiFetch(`/api/quizzes/${activeQuiz.id}/attempts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
       const data = await res.json()

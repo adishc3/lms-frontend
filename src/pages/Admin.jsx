@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { Users, Shield, Download, Upload, Search, Edit2, Check, X, Activity } from "lucide-react"
+import apiFetch, { apiUrl } from "@/lib/api"
 
 const ROLES = ["student", "instructor", "admin"]
 
@@ -27,7 +28,7 @@ export default function Admin() {
   useEffect(() => {
     if (!token) { navigate("/login"); return }
     // Verify admin access
-    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : null)
       .then((user) => {
         if (!user || user.role !== "admin") { navigate("/home"); return }
@@ -40,8 +41,8 @@ export default function Admin() {
     setLoading(true)
     try {
       const [usersRes, logsRes] = await Promise.all([
-        fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/admin/logs", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch("/api/admin/logs", { headers: { Authorization: `Bearer ${token}` } }),
       ])
       if (usersRes.ok) setUsers(await usersRes.json())
       if (logsRes.ok) setLogs(await logsRes.json())
@@ -60,7 +61,7 @@ export default function Admin() {
   const saveEdit = async (userId) => {
     setSaving(true)
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(editForm),
@@ -84,7 +85,7 @@ export default function Admin() {
     try {
       const formData = new FormData()
       formData.append("file", importFile)
-      const res = await fetch("/api/admin/users/import-csv", {
+      const res = await apiFetch("/api/admin/users/import-csv", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -126,7 +127,7 @@ export default function Admin() {
             </h1>
             <p className="text-slate-400 mt-1">Manage users and view system activity</p>
           </div>
-          <a href="/api/admin/users/export-csv" target="_blank" rel="noreferrer">
+          <a href={apiUrl("/api/admin/users/export-csv")} target="_blank" rel="noreferrer">
             <Button variant="outline" className="gap-2">
               <Download className="w-4 h-4" />
               Export Users CSV

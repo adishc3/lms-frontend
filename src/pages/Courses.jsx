@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import apiFetch from "@/lib/api"
 
 export default function Courses() {
   const navigate = useNavigate()
@@ -18,25 +19,20 @@ export default function Courses() {
       const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
       
       try {
-        const coursesRes = await fetch("/api/courses/", token ? {
+        const coursesRes = await apiFetch("/api/courses/", token ? {
           headers: { Authorization: `Bearer ${token}` }
         } : undefined)
         let allCourses = []
         if (coursesRes.ok) {
           allCourses = await coursesRes.json()
         }
-
         setCourses(allCourses)
-
         if (token) {
-          const meRes = await fetch("/api/auth/me", {
+          const meRes = await apiFetch("/api/auth/me", {
             headers: { Authorization: `Bearer ${token}` }
           })
-          if (meRes.ok) {
-            setUser(await meRes.json())
-          }
-
-          const enrolledRes = await fetch("/api/courses/my/courses", {
+          if (meRes.ok) { setUser(await meRes.json()) }
+          const enrolledRes = await apiFetch("/api/courses/my/courses", {
             headers: { Authorization: `Bearer ${token}` }
           })
           if (enrolledRes.ok) {
@@ -66,7 +62,7 @@ export default function Courses() {
 
     setEnrollingIds((prev) => new Set([...prev, courseId]))
     try {
-      const response = await fetch(`/api/courses/${courseId}/enroll`, {
+      const response = await apiFetch(`/api/courses/${courseId}/enroll`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       })

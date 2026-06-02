@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import apiFetch from "@/lib/api"
 import {
   Card,
   CardContent,
@@ -89,7 +90,7 @@ export default function Signup() {
     setSuccess("")
     setLoading(true)
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

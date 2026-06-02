@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Play, CheckCircle, PlusCircle, ClipboardList, BookOpen } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function CourseDetail() {
   const navigate = useNavigate()
@@ -22,21 +23,13 @@ export default function CourseDetail() {
       setLoading(true)
       setError("")
       try {
-        const courseRes = await fetch(`/api/courses/${courseId}`)
-        if (!courseRes.ok) {
-          throw new Error("Course not found")
-        }
+        const courseRes = await apiFetch(`/api/courses/${courseId}`)
+        if (!courseRes.ok) { throw new Error("Course not found") }
         const courseData = await courseRes.json()
         setCourse(courseData)
-
         const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
-        if (!token) {
-          return
-        }
-
-        const meRes = await fetch("/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        if (!token) { return }
+        const meRes = await apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
         let ownerStatus = false
         if (meRes.ok) {
           const meData = await meRes.json()
@@ -44,35 +37,20 @@ export default function CourseDetail() {
           setUser(meData)
           setIsOwner(ownerStatus)
         }
-
-        const enrolledRes = await fetch("/api/courses/my/courses", {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        const enrolledRes = await apiFetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
         let enrolledStatus = false
         if (enrolledRes.ok) {
           const enrolledCourses = await enrolledRes.json()
-          const enrolledIds = new Set(enrolledCourses.map((course) => course.id))
-          enrolledStatus = enrolledIds.has(courseData.id)
+          enrolledStatus = new Set(enrolledCourses.map((c) => c.id)).has(courseData.id)
           setIsEnrolled(enrolledStatus)
         }
-
-        const shouldFetchLessons = ownerStatus || enrolledStatus
-        if (shouldFetchLessons) {
-          const lessonsRes = await fetch(`/api/courses/${courseId}/lessons`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          if (lessonsRes.ok) {
-            setLessons(await lessonsRes.json())
-          }
+        if (ownerStatus || enrolledStatus) {
+          const lessonsRes = await apiFetch(`/api/courses/${courseId}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+          if (lessonsRes.ok) { setLessons(await lessonsRes.json()) }
         }
-
         if (enrolledStatus) {
-          const progressRes = await fetch(`/api/courses/${courseId}/progress`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          if (progressRes.ok) {
-            setProgress(await progressRes.json())
-          }
+          const progressRes = await apiFetch(`/api/courses/${courseId}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+          if (progressRes.ok) { setProgress(await progressRes.json()) }
         }
       } catch (err) {
         console.error(err)
@@ -95,7 +73,7 @@ export default function CourseDetail() {
         return
       }
 
-      const response = await fetch(`/api/courses/${courseId}/enroll`, {
+      const response = await apiFetch(`/api/courses/${courseId}/enroll`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -103,20 +81,11 @@ export default function CourseDetail() {
         const data = await response.json()
         throw new Error(data.detail || data.message || "Unable to enroll")
       }
-
       setIsEnrolled(true)
-      const progressRes = await fetch(`/api/courses/${courseId}/progress`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (progressRes.ok) {
-        setProgress(await progressRes.json())
-      }
-      const lessonsRes = await fetch(`/api/courses/${courseId}/lessons`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (lessonsRes.ok) {
-        setLessons(await lessonsRes.json())
-      }
+      const progressRes = await apiFetch(`/api/courses/${courseId}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+      if (progressRes.ok) { setProgress(await progressRes.json()) }
+      const lessonsRes = await apiFetch(`/api/courses/${courseId}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+      if (lessonsRes.ok) { setLessons(await lessonsRes.json()) }
     } catch (err) {
       console.error(err)
       setError(err.message || "Unable to enroll")

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { Brain, Send, Sparkles, BookOpen, Loader2 } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function AIAssistant() {
   const navigate = useNavigate()
@@ -33,7 +34,7 @@ export default function AIAssistant() {
   useEffect(() => {
     if (!selectedCourse) { setLessons([]); setSelectedLesson(""); return }
     setLoadingLessons(true)
-    fetch(`/api/courses/${selectedCourse}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch(`/api/courses/${selectedCourse}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.ok ? r.json() : [])
       .then((data) => { setLessons(data); setSelectedLesson("") })
       .catch(() => {})
@@ -47,7 +48,7 @@ export default function AIAssistant() {
     setAnswer("")
     setLoading(true)
     try {
-      const res = await fetch("/api/ai/study-assistant", {
+      const res = await apiFetch("/api/ai/study-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ lesson_id: Number(selectedLesson), question }),
@@ -69,7 +70,7 @@ export default function AIAssistant() {
     setQuizResult("")
     setLoading(true)
     try {
-      const res = await fetch("/api/ai/quiz-generator", {
+      const res = await apiFetch("/api/ai/quiz-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ lesson_id: Number(selectedLesson), question_count: questionCount }),

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import apiFetch from "@/lib/api"
 
 export default function MyCourses() {
   const navigate = useNavigate()
@@ -17,31 +18,15 @@ export default function MyCourses() {
       }
 
       try {
-        const coursesRes = await fetch("/api/courses/my/courses", {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-
+        const coursesRes = await apiFetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
         if (coursesRes.ok) {
           const coursesData = await coursesRes.json()
           const coursesWithProgress = await Promise.all(coursesData.map(async (course) => {
-            const lessonsRes = await fetch(`/api/courses/${course.id}/lessons`, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
+            const lessonsRes = await apiFetch(`/api/courses/${course.id}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
             const lessons = lessonsRes.ok ? await lessonsRes.json() : []
-            const totalLessons = lessons.length
-            const progressRes = await fetch(`/api/courses/${course.id}/progress`, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
+            const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, { headers: { Authorization: `Bearer ${token}` } })
             const progress = progressRes.ok ? await progressRes.json() : { completed: 0 }
-
-            return {
-              id: course.id,
-              title: course.title,
-              description: course.description || "",
-              progress_percent: progress.percent || 0,
-              total_lessons: totalLessons,
-              completed_lessons: progress.completed || 0
-            }
+            return { id: course.id, title: course.title, description: course.description || "", progress_percent: progress.percent || 0, total_lessons: lessons.length, completed_lessons: progress.completed || 0 }
           }))
           setCourses(coursesWithProgress)
         }

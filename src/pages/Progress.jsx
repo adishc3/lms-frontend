@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import apiFetch from "@/lib/api"
 
 export default function Progress() {
   const navigate = useNavigate()
@@ -17,29 +18,15 @@ export default function Progress() {
       }
 
       try {
-        const enrolledRes = await fetch("/api/courses/my/courses", {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        const enrolledRes = await apiFetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
         if (enrolledRes.ok) {
           const enrolled = await enrolledRes.json()
-          
           const progressPromises = enrolled.map(async (course) => {
-            const progressRes = await fetch(`/api/courses/${course.id}/progress`, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
+            const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, { headers: { Authorization: `Bearer ${token}` } })
             const progress = progressRes.ok ? await progressRes.json() : { total_lessons: 0, completed: 0, percent: 0 }
-            
-            return {
-              course_id: course.id,
-              course_title: course.title,
-              total_lessons: progress.total_lessons || 0,
-              completed: progress.completed || 0,
-              percent: progress.percent || 0
-            }
+            return { course_id: course.id, course_title: course.title, total_lessons: progress.total_lessons || 0, completed: progress.completed || 0, percent: progress.percent || 0 }
           })
-          
-          const data = await Promise.all(progressPromises)
-          setProgressData(data)
+          setProgressData(await Promise.all(progressPromises))
         }
       } catch (error) {
         console.error("Failed to fetch progress", error)
