@@ -67,7 +67,7 @@ export default function MyCourses() {
     <div className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-slate-800">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-cyan-500 cursor-pointer" onClick={() => navigate("/")}>LMS</h1>
+          <h1 className="text-2xl font-bold text-cyan-500 cursor-pointer" onClick={() => navigate("/")}>Learn@will</h1>
           <nav className="flex gap-4">
             <Button variant="ghost" onClick={() => navigate("/home")}>Dashboard</Button>
             <Button variant="ghost" onClick={() => navigate("/courses")}>All Courses</Button>
