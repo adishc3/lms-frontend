@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { CheckCircle, XCircle, ChevronRight, Trophy } from "lucide-react"
+import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
 export default function Quizzes() {
@@ -88,7 +89,7 @@ export default function Quizzes() {
     return (
       <Layout>
         <div className="flex items-center justify-center py-20">
-          <div className="w-10 h-10 border-4 border-[#60A5FA] border-t-transparent rounded-full animate-spin" />
+          <WaveLoader message="Loading quizzes..." />
         </div>
       </Layout>
     )

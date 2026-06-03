@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
 export default function Courses() {
@@ -89,10 +90,7 @@ export default function Courses() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#60A5FA] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-400">Loading courses...</p>
-        </div>
+        <WaveLoader message="Loading courses..." />
       </div>
     )
   }

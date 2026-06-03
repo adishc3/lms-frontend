@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Play, CheckCircle, PlusCircle, ClipboardList, BookOpen } from "lucide-react"
+import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
 export default function CourseDetail() {
@@ -97,7 +98,7 @@ export default function CourseDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <div className="text-slate-400">Loading course details...</div>
+        <WaveLoader message="Loading course details..." />
       </div>
     )
   }

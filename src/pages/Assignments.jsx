@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
+import { WaveLoader } from "@/components/WaveLoader.jsx"
 import { ClipboardList, Upload, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import apiFetch from "@/lib/api"
 
@@ -122,7 +123,7 @@ export default function Assignments() {
     return (
       <Layout>
         <div className="flex items-center justify-center py-20">
-          <div className="w-10 h-10 border-4 border-[#60A5FA] border-t-transparent rounded-full animate-spin" />
+          <WaveLoader message="Loading assignments..." />
         </div>
       </Layout>
     )

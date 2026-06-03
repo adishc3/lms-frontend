@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Image, Video, Music, Download, X } from "lucide-react"
+import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
 export default function LessonDetail() {
@@ -111,7 +112,7 @@ export default function LessonDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <div className="text-slate-400">Loading lesson...</div>
+        <WaveLoader message="Loading lesson..." />
       </div>
     )
   }
