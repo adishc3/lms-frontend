@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ShieldCheck, BookOpen, GraduationCap, Trophy, LogOut, Layout, PlusCircle } from "lucide-react"
 import { WaveLoader } from "@/components/WaveLoader.jsx"
+import { NotificationsPanel } from "@/components/NotificationsPanel.jsx"
 import apiFetch from "@/lib/api"
 
 export default function Home() {
@@ -11,6 +12,8 @@ export default function Home() {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [insights, setInsights] = useState(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,6 +37,20 @@ export default function Home() {
 
         const userData = await userRes.json()
         setUser(userData)
+
+        const notificationsRes = await apiFetch("/api/notifications")
+        if (notificationsRes.ok) {
+          setNotifications(await notificationsRes.json())
+        }
+
+        const summaryPath = userData.role === "instructor" || userData.role === "admin"
+          ? "/api/insights/instructor-overview"
+          : "/api/insights/progress-summary"
+
+        const insightsRes = await apiFetch(summaryPath)
+        if (insightsRes.ok) {
+          setInsights(await insightsRes.json())
+        }
 
         if (userData.role === "student") {
           const coursesRes = await apiFetch("/api/courses/my/courses", {
@@ -227,6 +244,34 @@ export default function Home() {
             ))}
           </div>
         )}
+
+        {insights && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
+            {(user?.role === 'student' ? [
+              { label: 'Courses Enrolled', value: insights.completion_stats?.courses_enrolled ?? courses.length, icon: BookOpen, color: 'text-blue-400' },
+              { label: 'Lessons Completed', value: insights.completion_stats?.completed_lessons ?? 0, icon: Layout, color: 'text-[#60A5FA]' },
+              { label: 'Completion Rate', value: `${insights.completion_stats?.completion_rate ?? 0}%`, icon: Trophy, color: 'text-yellow-400' },
+              { label: 'Total Lessons', value: insights.completion_stats?.total_lessons ?? 0, icon: GraduationCap, color: 'text-purple-400' },
+            ] : [
+              { label: 'Courses Owned', value: insights.total_courses ?? courses.length, icon: BookOpen, color: 'text-blue-400' },
+              { label: 'Unique Students', value: insights.unique_students ?? 0, icon: Layout, color: 'text-[#60A5FA]' },
+              { label: 'Total Lessons', value: insights.total_lessons ?? 0, icon: Trophy, color: 'text-yellow-400' },
+              { label: 'Total Completions', value: insights.total_completions ?? 0, icon: GraduationCap, color: 'text-purple-400' },
+            ]).map((stat, i) => (
+              <div key={i} className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex items-center gap-4">
+                <div className={`p-3 rounded-xl bg-slate-800 ${stat.color}`}>
+                  <stat.icon className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">{stat.label}</p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <NotificationsPanel notifications={notifications} />
 
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-2xl font-bold">
