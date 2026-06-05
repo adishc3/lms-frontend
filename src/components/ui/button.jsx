@@ -1,16 +1,18 @@
 import { forwardRef } from "react"
 
 const variantClasses = {
-  default: "bg-cyan-500 text-slate-950 hover:bg-cyan-600",
-  secondary: "bg-cyan-500 text-white hover:bg-cyan-400",
-  outline: "border border-slate-300 text-white hover:bg-white/10",
+  default: "bg-blue-500 text-white hover:bg-blue-600",
+  secondary: "bg-slate-700 text-white hover:bg-slate-600",
+  outline: "border-2 border-blue-400 text-blue-400 hover:bg-blue-400/10",
   ghost: "text-slate-300 hover:bg-slate-800 hover:text-white",
+  gradient: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600",
 }
 
 const sizeClasses = {
-  default: "px-4 py-3 text-base",
-  sm: "px-3 py-2 text-sm",
-  lg: "px-5 py-4 text-lg",
+  default: "px-4 py-2.5 text-sm",
+  sm: "px-3 py-1.5 text-xs",
+  lg: "px-6 py-3 text-base",
+  xl: "px-8 py-4 text-lg",
 }
 
 const Button = forwardRef(
@@ -22,7 +24,7 @@ const Button = forwardRef(
       <button
         ref={ref}
         type={props.type ?? "button"}
-        className={`inline-flex items-center justify-center rounded-full font-semibold transition-colors duration-200 ${variantClass} ${sizeClass} ${className}`}
+        className={`inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-200 ${variantClass} ${sizeClass} ${className}`}
         {...props}
       >
         {children}
@@ -30,5 +32,7 @@ const Button = forwardRef(
     )
   }
 )
+
+Button.displayName = "Button"
 
 export { Button }

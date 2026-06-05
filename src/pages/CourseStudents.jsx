@@ -3,9 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
-import { WaveLoader } from "@/components/WaveLoader.jsx"
-import { Users, ClipboardList, PlusCircle, Download, BookOpen } from "lucide-react"
-import apiFetch from "@/lib/api"
+import { ClipboardList, PlusCircle, Download, BookOpen } from "lucide-react"
 
 export default function CourseStudents() {
   const { courseId } = useParams()
@@ -31,9 +29,9 @@ export default function CourseStudents() {
     const load = async () => {
       try {
         const [courseRes, assignRes, quizRes] = await Promise.all([
-          apiFetch(`/api/courses/${courseId}`),
-          apiFetch(`/api/assignments/courses/${courseId}`),
-          apiFetch(`/api/quizzes/course/${courseId}`),
+          fetch(`/api/courses/${courseId}`),
+          fetch(`/api/assignments/courses/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`/api/quizzes/course/${courseId}`, { headers: { Authorization: `Bearer ${token}` } }),
         ])
         if (courseRes.ok) setCourse(await courseRes.json())
         if (assignRes.ok) setAssignments(await assignRes.json())
@@ -59,9 +57,9 @@ export default function CourseStudents() {
         due_date: assignForm.due_date ? new Date(assignForm.due_date).toISOString() : null,
         max_score: assignForm.max_score ? Number(assignForm.max_score) : null,
       }
-      const res = await apiFetch(`/api/assignments/courses/${courseId}`, {
+      const res = await fetch(`/api/assignments/courses/${courseId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       })
       const data = await res.json()
@@ -127,9 +125,9 @@ export default function CourseStudents() {
         course_id: Number(courseId),
         questions: quizForm.questions,
       }
-      const res = await apiFetch("/api/quizzes/", {
+      const res = await fetch("/api/quizzes/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       })
       const data = await res.json()
@@ -149,7 +147,7 @@ export default function CourseStudents() {
     return (
       <Layout>
         <div className="flex items-center justify-center py-20">
-          <WaveLoader message="Loading course data..." />
+          <div className="w-10 h-10 border-4 border-[#60A5FA] border-t-transparent rounded-full animate-spin" />
         </div>
       </Layout>
     )

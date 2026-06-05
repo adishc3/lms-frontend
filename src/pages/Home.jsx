@@ -11,7 +11,6 @@ export default function Home() {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
-  const [error, setError] = useState("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,7 +54,7 @@ export default function Home() {
                   completed_lessons: progress.completed || 0,
                   total_lessons: progress.total_lessons || 0
                 }
-              } catch (err) {
+              } catch {
                 return { ...course, progress_percent: 0, completed_lessons: 0, total_lessons: 0 }
               }
             }))
@@ -67,20 +66,32 @@ export default function Home() {
           })
           if (coursesRes.ok) {
             const coursesData = await coursesRes.json()
-            const ownedCourses = coursesData
-              .filter((course) => course.owner_id === userData.id)
-              .map((course) => ({
-                ...course,
-                progress_percent: 0,
-                completed_lessons: 0,
-                total_lessons: 0
-              }))
+            const owned = coursesData.filter((course) => course.owner_id === userData.id)
+
+            const ownedCourses = await Promise.all(owned.map(async (course) => {
+              try {
+                const lessonsRes = await apiFetch(`/api/courses/${course.id}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+                const lessons = lessonsRes.ok ? await lessonsRes.json() : []
+
+                const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+                const progress = progressRes.ok ? await progressRes.json() : { completed: 0, percent: 0 }
+
+                return {
+                  ...course,
+                  progress_percent: progress.percent || 0,
+                  completed_lessons: progress.completed || 0,
+                  total_lessons: lessons.length || 0
+                }
+              } catch {
+                return { ...course, progress_percent: 0, completed_lessons: 0, total_lessons: 0 }
+              }
+            }))
+
             setCourses(ownedCourses)
           }
         }
       } catch (error) {
         console.error("Failed to fetch dashboard data", error)
-        setError("Unable to load dashboard. Please try again.")
       } finally {
         setLoading(false)
       }
@@ -105,7 +116,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Navigation Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
@@ -147,7 +157,6 @@ export default function Home() {
       </header>
 
       <main className="container mx-auto px-6 py-10">
-        {/* Welcome Section */}
         <div className="mb-12">
           <div className="flex justify-between items-start">
             <div>
@@ -181,7 +190,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Stats Grid - Different for students vs instructors */}
         {user?.role === 'student' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
@@ -220,7 +228,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Courses Section */}
         <div className="flex justify-between items-end mb-6">
           <h2 className="text-2xl font-bold">
             {user?.role === 'student' ? 'My Courses' : 'My Created Courses'}
@@ -258,55 +265,61 @@ export default function Home() {
                   navigate(`/courses/${course.id}`)
                 }}
               >
-                <div className="h-40 bg-slate-800 relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
-                  <div className="absolute bottom-4 left-4">
-                    <span className="px-2 py-1 bg-[#60A5FA] text-black text-[10px] font-bold uppercase rounded leading-none">
-                      {user?.role === 'instructor' ? 'Manage' : 'Learning'}
-                    </span>
-                  </div>
-                </div>
-                <CardHeader className="p-6">
-                  <CardTitle className="text-xl group-hover:text-[#60A5FA] transition-colors">{course.title}</CardTitle>
-                  <CardDescription className="line-clamp-2 mt-2 text-slate-400">{course.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="px-6 pb-6 mt-auto">
-                  {user?.role === 'student' ? (
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Progress</span>
-                        <span className="text-[#60A5FA] font-bold">{course.progress_percent}%</span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div className="bg-[#60A5FA] h-full rounded-full transition-all duration-1000" style={{ width: `${course.progress_percent}%` }}></div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
-                        <span className="flex items-center gap-1">
-                          <Layout className="w-3 h-3" />
-                          {course.completed_lessons} / {course.total_lessons} Lessons
-                        </span>
-                        <span>{course.progress_percent === 100 ? 'Completed' : 'Active'}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm text-slate-400">
-                        <span className="font-semibold text-slate-300">{course.total_lessons || 0}</span> lesson{(course.total_lessons || 0) !== 1 ? 's' : ''}
-                      </p>
-                      <Button 
-                        size="sm" 
-                        className="w-full bg-[#60A5FA] text-slate-950 hover:bg-[#60A5FA]/90"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/courses/${course.id}/students`)
-                        }}
-                      >
-                        Manage Course
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+<CardHeader className="p-0">
+                   <div className="relative">
+                     <div style={{ paddingBottom: '56.25%' }} className="bg-slate-800">
+                       <img
+                         src={course.cover_image_url || `https://picsum.photos/seed/course-${course.id}/800/400`}
+                         alt={course.title}
+                         className="absolute inset-0 w-full h-full object-cover"
+                       />
+                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
+                       <div className="absolute bottom-4 left-4">
+                         <span className="px-2 py-1 bg-[#60A5FA] text-black text-[10px] font-bold uppercase rounded leading-none">
+                           {user?.role === 'instructor' ? 'Manage' : 'Learning'}
+                         </span>
+                       </div>
+                     </div>
+                   </div>
+                 </CardHeader>
+                 <CardContent className="flex-1 p-6">
+                   <CardTitle className="text-xl group-hover:text-[#60A5FA] transition-colors">{course.title}</CardTitle>
+                   <CardDescription className="line-clamp-2 mt-2 text-slate-400">{course.description}</CardDescription>
+                   <div className="space-y-3 mt-4">
+                     <div className="flex justify-between text-sm">
+                       <span className="text-slate-500 font-medium">Progress</span>
+                       <span className="text-[#60A5FA] font-bold">{course.progress_percent}%</span>
+                     </div>
+                     <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                       <div className="bg-[#60A5FA] h-full rounded-full transition-all duration-1000" style={{ width: `${course.progress_percent}%` }}></div>
+                     </div>
+                     <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
+                       <span className="flex items-center gap-1">
+                         <Layout className="w-3 h-3" />
+                         {course.completed_lessons} / {course.total_lessons} Lessons
+                       </span>
+                       <span>{course.progress_percent === 100 ? 'Completed' : 'Active'}</span>
+                     </div>
+                   </div>
+                   {user?.role === 'instructor' ? (
+                     <div className="space-y-2 mt-6">
+                       <p className="text-sm text-slate-400">
+                         <span className="font-semibold text-slate-300">{course.total_lessons || 0}</span> lesson{(course.total_lessons || 0) !== 1 ? 's' : ''}
+                       </p>
+                       <Button
+                         size="sm"
+                         className="w-full bg-[#60A5FA] text-slate-950 hover:bg-[#60A5FA]/90"
+                         onClick={(e) => {
+                           e.stopPropagation()
+                           navigate(`/courses/${course.id}/students`)
+                         }}
+                       >
+                         Manage Course
+                       </Button>
+                     </div>
+                   ) : null}
+                 </CardContent>
+               </Card>
             ))}
           </div>
         )}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowRight, Play, CheckCircle, PlusCircle, ClipboardList, BookOpen } from "lucide-react"
+import { ArrowRight, Play, CheckCircle, PlusCircle, ClipboardList, BookOpen, Edit3, Trash2 } from "lucide-react"
 import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
@@ -17,6 +17,7 @@ export default function CourseDetail() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
+  const [deletingCourse, setDeletingCourse] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -63,6 +64,31 @@ export default function CourseDetail() {
 
     fetchCourse()
   }, [courseId])
+
+  const handleDeleteCourse = async () => {
+    if (!window.confirm("Delete this course and all lessons?")) {
+      return
+    }
+    setError("")
+    setDeletingCourse(true)
+    try {
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
+      const response = await apiFetch(`/api/courses/${courseId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.detail || data.message || "Unable to delete course")
+      }
+      navigate("/courses")
+    } catch (err) {
+      console.error(err)
+      setError(err.message || "Unable to delete course")
+    } finally {
+      setDeletingCourse(false)
+    }
+  }
 
   const handleEnroll = async () => {
     setError("")
@@ -151,6 +177,29 @@ export default function CourseDetail() {
                 <div className="flex flex-col gap-2">
                   <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">Course Overview</p>
                   <CardTitle className="text-3xl">{course.title}</CardTitle>
+                              {isOwner ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-slate-700 text-slate-200 hover:border-cyan-500"
+                                    onClick={() => navigate(`/courses/${courseId}/edit`)}
+                                  >
+                                    <Edit3 className="w-4 h-4 mr-2" />
+                                    Edit course
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="border-red-500 text-red-300 hover:bg-red-600/10"
+                                    onClick={handleDeleteCourse}
+                                    disabled={deletingCourse}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    {deletingCourse ? "Deleting..." : "Delete course"}
+                                  </Button>
+                                </div>
+                              ) : null}
                 </div>
               </CardHeader>
               <CardContent>

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
-export default function CreateCourse() {
+export default function EditCourse() {
+  const { courseId } = useParams()
   const navigate = useNavigate()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -15,26 +16,36 @@ export default function CreateCourse() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
-    if (!token) {
-      navigate("/login")
-      return
-    }
-
-    apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (!data) {
+    const loadCourse = async () => {
+      try {
+        const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
+        if (!token) {
           navigate("/login")
           return
         }
-        setLoading(false)
-        if ((data.role || "").toLowerCase() !== "instructor" && (data.role || "").toLowerCase() !== "admin") {
-          navigate("/home")
+
+        const response = await apiFetch(`/api/courses/${courseId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.detail || data.message || "Course not found")
         }
-      })
-      .catch(() => navigate("/login"))
-  }, [navigate])
+
+        const courseData = await response.json()
+        setTitle(courseData.title || "")
+        setDescription(courseData.description || "")
+        setCoverImageUrl(courseData.cover_image_url || "")
+      } catch (err) {
+        console.error(err)
+        setError(err.message || "Unable to load course")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadCourse()
+  }, [courseId, navigate])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -43,8 +54,13 @@ export default function CreateCourse() {
 
     try {
       const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
-      const response = await apiFetch("/api/courses/", {
-        method: "POST",
+      if (!token) {
+        navigate("/login")
+        return
+      }
+
+      const response = await apiFetch(`/api/courses/${courseId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -53,11 +69,12 @@ export default function CreateCourse() {
       })
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.detail || data.message || "Unable to create course")
+        throw new Error(data.detail || data.message || "Unable to update course")
       }
-      navigate(`/courses/${data.id}`)
+      navigate(`/courses/${courseId}`)
     } catch (err) {
-      setError(err.message || "Unable to create course")
+      console.error(err)
+      setError(err.message || "Unable to update course")
     } finally {
       setSaving(false)
     }
@@ -66,7 +83,7 @@ export default function CreateCourse() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <WaveLoader message="Preparing course creation..." />
+        <WaveLoader message="Loading course for edit..." />
       </div>
     )
   }
@@ -76,8 +93,10 @@ export default function CreateCourse() {
       <div className="container mx-auto max-w-3xl">
         <Card className="bg-slate-900/80 border-slate-800">
           <CardHeader>
-            <CardTitle>Create a new course</CardTitle>
-            <CardDescription>Only instructors can create courses and add lessons to them.</CardDescription>
+            <div>
+              <CardTitle>Edit course</CardTitle>
+              <CardDescription>Update title, description, and cover art for your course.</CardDescription>
+            </div>
           </CardHeader>
           <form onSubmit={handleSubmit} className="space-y-6 p-6">
             <div className="grid gap-2">
@@ -112,15 +131,17 @@ export default function CreateCourse() {
                 placeholder="https://example.com/cover.jpg"
                 className="rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
-              <p className="text-xs text-slate-500">Leave empty to use a generated cover image.</p>
+              <p className="text-xs text-slate-500">Leave empty to continue using the current or generated cover image.</p>
             </div>
 
             {error ? <div className="rounded-3xl bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div> : null}
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
-              <Button type="button" variant="outline" onClick={() => navigate("/home")}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => navigate(`/courses/${courseId}`)}>
+                Cancel
+              </Button>
               <Button type="submit" className="bg-cyan-500 text-slate-950 hover:bg-cyan-400" disabled={saving}>
-                {saving ? "Creating course..." : "Create course"}
+                {saving ? "Saving course..." : "Save changes"}
               </Button>
             </div>
           </form>

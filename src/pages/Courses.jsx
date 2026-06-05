@@ -137,7 +137,14 @@ export default function Courses() {
               const isEnrolled = enrolledCourseIds.has(course.id)
               const isEnrolling = enrollingIds.has(course.id)
               return (
-                <Card key={course.id} className="bg-slate-900/50 border-slate-800 flex flex-col">
+                <Card key={course.id} className="bg-slate-900/50 border-slate-800 flex flex-col overflow-hidden">
+                  <div className="w-full h-44 overflow-hidden bg-slate-800">
+                    <img
+                      src={course.cover_image_url || `https://picsum.photos/seed/course-${course.id}/800/400`}
+                      alt={course.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <CardHeader>
                     <CardTitle>{course.title}</CardTitle>
                     <CardDescription>{course.description || "No description available"}</CardDescription>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Settings, Users, Brain, ClipboardList } from "lucide-react"
+import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Users, Brain, ClipboardList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Layout({ children }) {

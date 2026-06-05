@@ -19,17 +19,49 @@ export default function MyCourses() {
       }
 
       try {
-        const coursesRes = await apiFetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
-        if (coursesRes.ok) {
-          const coursesData = await coursesRes.json()
-          const coursesWithProgress = await Promise.all(coursesData.map(async (course) => {
-            const lessonsRes = await apiFetch(`/api/courses/${course.id}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
-            const lessons = lessonsRes.ok ? await lessonsRes.json() : []
-            const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, { headers: { Authorization: `Bearer ${token}` } })
-            const progress = progressRes.ok ? await progressRes.json() : { completed: 0 }
-            return { id: course.id, title: course.title, description: course.description || "", progress_percent: progress.percent || 0, total_lessons: lessons.length, completed_lessons: progress.completed || 0 }
-          }))
-          setCourses(coursesWithProgress)
+        const userRes = await apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        if (!userRes.ok) {
+          navigate("/login")
+          return
+        }
+
+        const userData = await userRes.json()
+
+        if (userData.role === "instructor") {
+          const allRes = await apiFetch("/api/courses/", { headers: { Authorization: `Bearer ${token}` } })
+          if (allRes.ok) {
+            const allCourses = await allRes.json()
+            const owned = allCourses.filter((c) => c.owner_id === userData.id)
+
+            const coursesWithProgress = await Promise.all(owned.map(async (course) => {
+              try {
+                const lessonsRes = await apiFetch(`/api/courses/${course.id}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+                const lessons = lessonsRes.ok ? await lessonsRes.json() : []
+
+                const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+                const progress = progressRes.ok ? await progressRes.json() : { completed: 0 }
+
+                return { id: course.id, title: course.title, description: course.description || "", progress_percent: progress.percent || 0, total_lessons: lessons.length, completed_lessons: progress.completed || 0 }
+              } catch {
+                return { id: course.id, title: course.title, description: course.description || "", progress_percent: 0, total_lessons: 0, completed_lessons: 0 }
+              }
+            }))
+
+            setCourses(coursesWithProgress)
+          }
+        } else {
+          const coursesRes = await apiFetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
+          if (coursesRes.ok) {
+            const coursesData = await coursesRes.json()
+            const coursesWithProgress = await Promise.all(coursesData.map(async (course) => {
+              const lessonsRes = await apiFetch(`/api/courses/${course.id}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+              const lessons = lessonsRes.ok ? await lessonsRes.json() : []
+              const progressRes = await apiFetch(`/api/courses/${course.id}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+              const progress = progressRes.ok ? await progressRes.json() : { completed: 0 }
+              return { id: course.id, title: course.title, description: course.description || "", progress_percent: progress.percent || 0, total_lessons: lessons.length, completed_lessons: progress.completed || 0 }
+            }))
+            setCourses(coursesWithProgress)
+          }
         }
       } catch (error) {
         console.error("Failed to fetch courses", error)
@@ -86,6 +118,13 @@ export default function MyCourses() {
                 }}
               >
                 <CardHeader>
+                  <div className="w-full h-40 mb-4 overflow-hidden rounded-lg bg-slate-800">
+                    <img
+                      src={course.cover_image_url || `https://picsum.photos/seed/course-${course.id}/800/400`}
+                      alt={course.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <CardTitle>{course.title}</CardTitle>
                   <CardDescription>{course.description}</CardDescription>
                 </CardHeader>

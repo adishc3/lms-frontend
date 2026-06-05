@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -23,23 +23,34 @@ export default function AIAssistant() {
 
   const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
 
-  useEffect(() => {
-    if (!token) { navigate("/login"); return }
-    fetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : [])
-      .then(setCourses)
-      .catch(() => {})
-  }, [navigate, token])
+useEffect(() => {
+      if (!token) { navigate("/login"); return }
+      fetch("/api/courses/my/courses", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.ok ? r.json() : [])
+        .then(setCourses)
+        .catch(() => {})
+    }, [navigate, token])
 
-  useEffect(() => {
-    if (!selectedCourse) { setLessons([]); setSelectedLesson(""); return }
-    setLoadingLessons(true)
-    apiFetch(`/api/courses/${selectedCourse}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => { setLessons(data); setSelectedLesson("") })
-      .catch(() => {})
-      .finally(() => setLoadingLessons(false))
-  }, [selectedCourse, token])
+    const prevSelectedCourseRef = useRef(selectedCourse);
+    useEffect(() => {
+      if (prevSelectedCourseRef.current !== "" && selectedCourse === "") {
+        setLessons([]);
+        setSelectedLesson("");
+      }
+      prevSelectedCourseRef.current = selectedCourse;
+    }, [selectedCourse]);
+
+    useEffect(() => {
+      if (!selectedCourse) {
+        return
+      }
+      setLoadingLessons(true)
+      apiFetch(`/api/courses/${selectedCourse}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => { setLessons(data); setSelectedLesson("") })
+        .catch(() => {})
+        .finally(() => setLoadingLessons(false))
+    }, [selectedCourse, token])
 
   const handleStudyAssistant = async (e) => {
     e.preventDefault()

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -26,33 +26,32 @@ export default function Admin() {
 
   const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
 
-  useEffect(() => {
-    if (!token) { navigate("/login"); return }
-    // Verify admin access
-    apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : null)
-      .then((user) => {
-        if (!user || user.role !== "admin") { navigate("/home"); return }
-        loadData()
-      })
-      .catch(() => navigate("/home"))
-  }, [navigate, token])
+const loadData = useCallback(async () => {
+     setLoading(true)
+     try {
+       const [usersRes, logsRes] = await Promise.all([
+         apiFetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
+         apiFetch("/api/admin/logs", { headers: { Authorization: `Bearer ${token}` } }),
+       ])
+       if (usersRes.ok) setUsers(await usersRes.json())
+       if (logsRes.ok) setLogs(await logsRes.json())
+     } catch {
+       setError("Failed to load admin data")
+     } finally {
+       setLoading(false)
+     }
+   }, [token])
 
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const [usersRes, logsRes] = await Promise.all([
-        apiFetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
-        apiFetch("/api/admin/logs", { headers: { Authorization: `Bearer ${token}` } }),
-      ])
-      if (usersRes.ok) setUsers(await usersRes.json())
-      if (logsRes.ok) setLogs(await logsRes.json())
-    } catch {
-      setError("Failed to load admin data")
-    } finally {
-      setLoading(false)
-    }
-  }
+   useEffect(() => {
+     if (!token) { navigate("/login"); return }
+     apiFetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+       .then((r) => r.ok ? r.json() : null)
+       .then((user) => {
+         if (!user || user.role !== "admin") { navigate("/home"); return }
+         loadData()
+       })
+       .catch(() => navigate("/home"))
+   }, [navigate, token, loadData])
 
   const startEdit = (user) => {
     setEditingUser(user.id)
