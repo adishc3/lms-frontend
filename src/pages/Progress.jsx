@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
+import Layout from "@/components/Layout"
 
 export default function Progress() {
   const navigate = useNavigate()
@@ -52,18 +53,8 @@ export default function Progress() {
   const overallPercent = totalLessons > 0 ? Math.round((totalCompleted / totalLessons) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-cyan-500 cursor-pointer" onClick={() => navigate("/")}>Learn@will</h1>
-          <nav className="flex gap-4">
-            <Button variant="ghost" onClick={() => navigate("/home")}>Dashboard</Button>
-            <Button variant="ghost" onClick={() => navigate("/my-courses")}>My Courses</Button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-semibold mb-2">Learning Progress</h2>
           <p className="text-slate-400">Track your progress across all enrolled courses</p>
@@ -115,7 +106,7 @@ export default function Progress() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </Layout>
   )
 }

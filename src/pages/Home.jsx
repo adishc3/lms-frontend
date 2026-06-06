@@ -2,8 +2,9 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ShieldCheck, BookOpen, GraduationCap, Trophy, LogOut, Layout, PlusCircle } from "lucide-react"
+import { ShieldCheck, BookOpen, GraduationCap, Trophy, LogOut, PlusCircle } from "lucide-react"
 import { WaveLoader } from "@/components/WaveLoader.jsx"
+import Layout from "@/components/Layout"
 import { NotificationsPanel } from "@/components/NotificationsPanel.jsx"
 import apiFetch from "@/lib/api"
 
@@ -131,48 +132,10 @@ export default function Home() {
     )
   }
 
+  const totalCompleted = courses.reduce((acc, c) => acc + (c.completed_lessons || 0), 0)
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <ShieldCheck className="w-7 h-7 text-[#60A5FA]" />
-            <span className="text-xl font-bold">Learn@will</span>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-8">
-            <button onClick={() => navigate("/home")} className="text-sm font-medium text-[#60A5FA]">Dashboard</button>
-            {user?.role === 'student' && (
-              <>
-                <button onClick={() => navigate("/courses")} className="text-sm font-medium text-slate-300 hover:text-white">Explore</button>
-                <button onClick={() => navigate("/certificates")} className="text-sm font-medium text-slate-300 hover:text-white">Certificates</button>
-                <button onClick={() => navigate("/ai")} className="text-sm font-medium text-slate-300 hover:text-white">AI Assistant</button>
-              </>
-            )}
-            {user?.role === 'instructor' && (
-              <button onClick={() => navigate("/my-courses")} className="text-sm font-medium text-slate-300 hover:text-white">My Courses</button>
-            )}
-            {user?.role === 'admin' && (
-              <button onClick={() => navigate("/admin")} className="text-sm font-medium text-purple-400 hover:text-white">Admin</button>
-            )}
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-sm font-semibold">{user?.full_name || user?.email || 'User'}</span>
-              <span className="text-xs text-slate-400 capitalize">{user?.role || 'User'}</span>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-               <span className="text-[#60A5FA] font-bold">{(user?.full_name?.[0] || user?.email?.[0] || 'U').toUpperCase()}</span>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-800 text-slate-400 hover:text-white gap-2">
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sign out</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
+    <Layout>
       <main className="container mx-auto px-6 py-10">
         <div className="mb-12">
           <div className="flex justify-between items-start">
@@ -211,7 +174,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
               { label: 'Enrolled Courses', value: courses.length, icon: BookOpen, color: 'text-blue-400' },
-              { label: 'Completed Lessons', value: courses.reduce((acc, curr) => acc + (curr.completed_lessons || 0), 0), icon: Layout, color: 'text-[#60A5FA]' },
+              { label: 'Completed Lessons', value: courses.reduce((acc, curr) => acc + (curr.completed_lessons || 0), 0), icon: ShieldCheck, color: 'text-[#60A5FA]' },
               { label: 'Average Progress', value: `${courses.length > 0 ? Math.round(courses.reduce((acc, curr) => acc + (curr.progress_percent || 0), 0) / courses.length) : 0}%`, icon: Trophy, color: 'text-yellow-400' },
               { label: 'Certificates Earned', value: courses.filter((c) => (c.progress_percent || 0) === 100).length, icon: GraduationCap, color: 'text-purple-400' },
             ].map((stat, i) => (
@@ -230,7 +193,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
             {[
               { label: 'Courses Created', value: courses.length, icon: BookOpen, color: 'text-blue-400' },
-              { label: 'Total Students', value: courses.reduce((acc, curr) => acc + (curr.student_count || 0), 0), icon: Layout, color: 'text-[#60A5FA]' },
+              { label: 'Total Students', value: courses.reduce((acc, curr) => acc + (curr.student_count || 0), 0), icon: ShieldCheck, color: 'text-[#60A5FA]' },
             ].map((stat, i) => (
               <div key={i} className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex items-center gap-4">
                 <div className={`p-3 rounded-xl bg-slate-800 ${stat.color}`}>
@@ -245,19 +208,14 @@ export default function Home() {
           </div>
         )}
 
-        {insights && (
+        {insights && user?.role !== 'student' && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
-            {(user?.role === 'student' ? [
-              { label: 'Courses Enrolled', value: insights.completion_stats?.courses_enrolled ?? courses.length, icon: BookOpen, color: 'text-blue-400' },
-              { label: 'Lessons Completed', value: insights.completion_stats?.completed_lessons ?? 0, icon: Layout, color: 'text-[#60A5FA]' },
-              { label: 'Completion Rate', value: `${insights.completion_stats?.completion_rate ?? 0}%`, icon: Trophy, color: 'text-yellow-400' },
-              { label: 'Total Lessons', value: insights.completion_stats?.total_lessons ?? 0, icon: GraduationCap, color: 'text-purple-400' },
-            ] : [
+            {[
               { label: 'Courses Owned', value: insights.total_courses ?? courses.length, icon: BookOpen, color: 'text-blue-400' },
-              { label: 'Unique Students', value: insights.unique_students ?? 0, icon: Layout, color: 'text-[#60A5FA]' },
+              { label: 'Unique Students', value: insights.unique_students ?? 0, icon: ShieldCheck, color: 'text-[#60A5FA]' },
               { label: 'Total Lessons', value: insights.total_lessons ?? 0, icon: Trophy, color: 'text-yellow-400' },
               { label: 'Total Completions', value: insights.total_completions ?? 0, icon: GraduationCap, color: 'text-purple-400' },
-            ]).map((stat, i) => (
+            ].map((stat, i) => (
               <div key={i} className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex items-center gap-4">
                 <div className={`p-3 rounded-xl bg-slate-800 ${stat.color}`}>
                   <stat.icon className="w-6 h-6" />
@@ -271,104 +229,44 @@ export default function Home() {
           </div>
         )}
 
-        <NotificationsPanel notifications={notifications} />
+        <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6">
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Your courses</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => navigate('/courses')}>Browse courses</Button>
+              </div>
+            </div>
 
-        <div className="flex justify-between items-end mb-6">
-          <h2 className="text-2xl font-bold">
-            {user?.role === 'student' ? 'My Courses' : 'My Created Courses'}
-          </h2>
-          {user?.role === 'student' && (
-            <Button variant="link" className="text-[#60A5FA]" onClick={() => navigate("/courses")}>Explore more courses</Button>
-          )}
+            {courses.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-slate-400">No courses available</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {courses.map((course) => (
+                  <Card key={course.id} className="cursor-pointer hover:border-cyan-500/50 transition-colors" onClick={() => navigate(`/courses/${course.id}`)}>
+                    <CardHeader>
+                      <CardTitle>{course.title}</CardTitle>
+                      <CardDescription>{course.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-slate-400">{course.completed_lessons} / {course.total_lessons} Lessons</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <NotificationsPanel notifications={notifications} />
+          </div>
         </div>
 
-        {courses.length === 0 ? (
-          <Card className="bg-slate-900/30 border border-dashed border-slate-800 rounded-3xl py-20 text-center">
-            <div className="inline-flex p-4 rounded-full bg-slate-900 mb-4 text-slate-400">
-              <BookOpen className="w-8 h-8" />
-            </div>
-            <p className="text-xl font-semibold mb-2">
-              {user?.role === 'student' ? 'No active courses' : 'No courses created yet'}
-            </p>
-            <p className="text-slate-500 max-w-sm mx-auto mb-8">
-              {user?.role === 'student' 
-                ? "You haven't enrolled in any courses yet. Start your journey by browsing our catalog."
-                : "Create your first course to get started teaching."}
-            </p>
-            <Button onClick={() => navigate(user?.role === 'student' ? "/courses" : "/courses/create")} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
-              {user?.role === 'student' ? 'Browse Catalog' : 'Create Course'}
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <Card
-                key={course.id}
-                className="bg-slate-900/50 border-slate-800 group hover:border-[#60A5FA]/50 transition-all cursor-pointer overflow-hidden flex flex-col"
-                onClick={(e) => {
-                  if (e.target.closest && e.target.closest('button, a')) return
-                  navigate(`/courses/${course.id}`)
-                }}
-              >
-<CardHeader className="p-0">
-                   <div className="relative">
-                     <div style={{ paddingBottom: '56.25%' }} className="bg-slate-800">
-                       <img
-                         src={course.cover_image_url || `https://picsum.photos/seed/course-${course.id}/800/400`}
-                         alt={course.title}
-                         className="absolute inset-0 w-full h-full object-cover"
-                       />
-                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
-                       <div className="absolute bottom-4 left-4">
-                         <span className="px-2 py-1 bg-[#60A5FA] text-black text-[10px] font-bold uppercase rounded leading-none">
-                           {user?.role === 'instructor' ? 'Manage' : 'Learning'}
-                         </span>
-                       </div>
-                     </div>
-                   </div>
-                 </CardHeader>
-                 <CardContent className="flex-1 p-6">
-                   <CardTitle className="text-xl group-hover:text-[#60A5FA] transition-colors">{course.title}</CardTitle>
-                   <CardDescription className="line-clamp-2 mt-2 text-slate-400">{course.description}</CardDescription>
-                   <div className="space-y-3 mt-4">
-                     <div className="flex justify-between text-sm">
-                       <span className="text-slate-500 font-medium">Progress</span>
-                       <span className="text-[#60A5FA] font-bold">{course.progress_percent}%</span>
-                     </div>
-                     <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                       <div className="bg-[#60A5FA] h-full rounded-full transition-all duration-1000" style={{ width: `${course.progress_percent}%` }}></div>
-                     </div>
-                     <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
-                       <span className="flex items-center gap-1">
-                         <Layout className="w-3 h-3" />
-                         {course.completed_lessons} / {course.total_lessons} Lessons
-                       </span>
-                       <span>{course.progress_percent === 100 ? 'Completed' : 'Active'}</span>
-                     </div>
-                   </div>
-                   {user?.role === 'instructor' ? (
-                     <div className="space-y-2 mt-6">
-                       <p className="text-sm text-slate-400">
-                         <span className="font-semibold text-slate-300">{course.total_lessons || 0}</span> lesson{(course.total_lessons || 0) !== 1 ? 's' : ''}
-                       </p>
-                       <Button
-                         size="sm"
-                         className="w-full bg-[#60A5FA] text-slate-950 hover:bg-[#60A5FA]/90"
-                         onClick={(e) => {
-                           e.stopPropagation()
-                           navigate(`/courses/${course.id}/students`)
-                         }}
-                       >
-                         Manage Course
-                       </Button>
-                     </div>
-                   ) : null}
-                 </CardContent>
-               </Card>
-            ))}
-          </div>
-        )}
       </main>
-    </div>
+    </Layout>
   )
 }

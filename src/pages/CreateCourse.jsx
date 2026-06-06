@@ -10,6 +10,8 @@ export default function CreateCourse() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [coverImageUrl, setCoverImageUrl] = useState("")
+  const [isPaid, setIsPaid] = useState(false)
+  const [price, setPrice] = useState(0)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -49,13 +51,37 @@ export default function CreateCourse() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ title, description, cover_image_url: coverImageUrl || undefined }),
+        body: JSON.stringify({ title, description, cover_image_url: coverImageUrl || undefined, is_paid: isPaid, price: isPaid ? Number(price) : 0 }),
       })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.detail || data.message || "Unable to create course")
+      let data = null
+      try {
+        data = await response.json()
+      } catch (e) {
+        data = null
       }
-      navigate(`/courses/${data.id}`)
+
+      const extractMessage = (maybeData, resp) => {
+        if (!maybeData) return resp?.statusText || "Unable to create course"
+        const candidate = maybeData.detail || maybeData.message || maybeData.error || maybeData
+        if (typeof candidate === "string") return candidate
+        try {
+          return JSON.stringify(candidate)
+        } catch (e) {
+          return String(candidate)
+        }
+      }
+
+      if (!response.ok) {
+        const msg = extractMessage(data, response)
+        throw new Error(msg)
+      }
+
+      // If backend returns created course, navigate to it; otherwise fall back to courses list
+      if (data && data.id) {
+        navigate(`/courses/${data.id}`)
+      } else {
+        navigate(`/courses`)
+      }
     } catch (err) {
       setError(err.message || "Unable to create course")
     } finally {
@@ -90,6 +116,35 @@ export default function CreateCourse() {
                 placeholder="Enter a title for your course"
                 required
               />
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-slate-200">Access</label>
+              <div className="flex items-center gap-4">
+                <label className="inline-flex items-center gap-2">
+                  <input type="radio" name="paid" checked={!isPaid} onChange={() => setIsPaid(false)} />
+                  <span className="text-sm">Free</span>
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input type="radio" name="paid" checked={isPaid} onChange={() => setIsPaid(true)} />
+                  <span className="text-sm">Paid</span>
+                </label>
+              </div>
+              {isPaid && (
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium text-slate-200">Price (USD)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(Number(e.target.value))}
+                    className="rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                    placeholder="Enter price in USD"
+                    required={isPaid}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid gap-2">

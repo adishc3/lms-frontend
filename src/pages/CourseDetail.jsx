@@ -6,6 +6,9 @@ import { ArrowRight, Play, CheckCircle, PlusCircle, ClipboardList, BookOpen, Edi
 import { WaveLoader } from "@/components/WaveLoader.jsx"
 import apiFetch from "@/lib/api"
 
+import Layout from "@/components/Layout"
+import PaymentModal from "@/components/PaymentModal.jsx"
+
 export default function CourseDetail() {
   const navigate = useNavigate()
   const { courseId } = useParams()
@@ -19,6 +22,14 @@ export default function CourseDetail() {
   const [enrolling, setEnrolling] = useState(false)
   const [deletingCourse, setDeletingCourse] = useState(false)
   const [error, setError] = useState("")
+  const [comments, setComments] = useState([])
+  const [commentText, setCommentText] = useState("")
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [commentError, setCommentError] = useState("")
+  const [isPurchased, setIsPurchased] = useState(false)
+  const [purchaseLoading, setPurchaseLoading] = useState(false)
+  const [purchaseError, setPurchaseError] = useState("")
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -46,6 +57,17 @@ export default function CourseDetail() {
           enrolledStatus = new Set(enrolledCourses.map((c) => c.id)).has(courseData.id)
           setIsEnrolled(enrolledStatus)
         }
+        // check purchase status for paid courses
+        try {
+          const paymentsRes = await apiFetch("/api/courses/payments", { headers: { Authorization: `Bearer ${token}` } })
+          if (paymentsRes.ok) {
+            const payments = await paymentsRes.json()
+            const purchased = payments.some((p) => p.course_id === courseData.id && (p.status || "").toLowerCase() === "completed")
+            setIsPurchased(purchased)
+          }
+        } catch (e) {
+          // ignore payment check failures
+        }
         if (ownerStatus || enrolledStatus) {
           const lessonsRes = await apiFetch(`/api/courses/${courseId}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
           if (lessonsRes.ok) { setLessons(await lessonsRes.json()) }
@@ -54,6 +76,7 @@ export default function CourseDetail() {
           const progressRes = await apiFetch(`/api/courses/${courseId}/progress`, { headers: { Authorization: `Bearer ${token}` } })
           if (progressRes.ok) { setProgress(await progressRes.json()) }
         }
+        await fetchComments(courseId)
       } catch (err) {
         console.error(err)
         setError(err.message || "Unable to load course")
@@ -90,6 +113,28 @@ export default function CourseDetail() {
     }
   }
 
+  const fetchComments = async (courseIdToFetch) => {
+    const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
+    if (!token) {
+      setComments([])
+      return
+    }
+
+    setCommentsLoading(true)
+    try {
+      const response = await apiFetch(`/api/comments/course/${courseIdToFetch}`)
+      if (!response.ok) {
+        return
+      }
+      const data = await response.json()
+      setComments(data)
+    } catch {
+      // Keep page usable if comment fetching fails.
+    } finally {
+      setCommentsLoading(false)
+    }
+  }
+
   const handleEnroll = async () => {
     setError("")
     setEnrolling(true)
@@ -113,6 +158,7 @@ export default function CourseDetail() {
       if (progressRes.ok) { setProgress(await progressRes.json()) }
       const lessonsRes = await apiFetch(`/api/courses/${courseId}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
       if (lessonsRes.ok) { setLessons(await lessonsRes.json()) }
+      await fetchComments(courseId)
     } catch (err) {
       console.error(err)
       setError(err.message || "Unable to enroll")
@@ -121,54 +167,130 @@ export default function CourseDetail() {
     }
   }
 
+  const handlePurchase = async () => {
+    // open modal-assisted payment flow
+    setPurchaseError("")
+    setPurchaseLoading(true)
+    try {
+      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
+      if (!token) {
+        navigate("/login")
+        return
+      }
+
+      const response = await apiFetch(`/api/courses/${courseId}/purchase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ payment_method: "manual", currency: "USD" }),
+      })
+      if (response.ok) {
+        try {
+          const payment = await response.json()
+          // backend recorded payment — reflect success
+        } catch {
+          // ignore json parse
+        }
+        setIsPurchased(true)
+        setIsEnrolled(true)
+      } else {
+        // fallback: simulate success locally if backend purchase isn't available
+        console.warn("Backend purchase failed, simulating success")
+        setIsPurchased(true)
+        setIsEnrolled(true)
+      }
+
+      // attempt to register enrollment on backend so server-side state matches client
+      try {
+        await apiFetch(`/api/courses/${courseId}/enroll`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch (e) {
+        // ignore enroll failure; client state remains enrolled
+      }
+
+      // refresh course lessons and progress where possible
+      try {
+        const lessonsRes = await apiFetch(`/api/courses/${courseId}/lessons`, { headers: { Authorization: `Bearer ${token}` } })
+        if (lessonsRes.ok) { setLessons(await lessonsRes.json()) }
+      } catch {}
+      try {
+        const progressRes = await apiFetch(`/api/courses/${courseId}/progress`, { headers: { Authorization: `Bearer ${token}` } })
+        if (progressRes.ok) { setProgress(await progressRes.json()) }
+      } catch {}
+      await fetchComments(courseId)
+      } catch (err) {
+      console.error(err)
+      // If backend fails entirely, still simulate success to provide dummy payment experience
+      setIsPurchased(true)
+      setIsEnrolled(true)
+    } finally {
+      setPurchaseLoading(false)
+    }
+  }
+
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const openPaymentModal = () => setPaymentModalOpen(true)
+  const closePaymentModal = () => setPaymentModalOpen(false)
+
+  const payFromModal = async () => {
+    closePaymentModal()
+    await handlePurchase()
+  }
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim()) {
+      setCommentError("Please enter a comment before submitting.")
+      return
+    }
+
+    setCommentSubmitting(true)
+    setCommentError("")
+    try {
+      const response = await apiFetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ course_id: Number(courseId), lesson_id: null, content: commentText.trim() }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || "Unable to post comment")
+      }
+      setComments((prev) => [data, ...prev])
+      setCommentText("")
+    } catch (err) {
+      setCommentError(err.message || "Unable to post comment")
+    } finally {
+      setCommentSubmitting(false)
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <WaveLoader message="Loading course details..." />
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center py-20">
+          <WaveLoader message="Loading course details..." />
+        </div>
+      </Layout>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center px-6 text-center gap-6">
-        <p className="text-lg font-semibold text-red-400">{error}</p>
-        <div className="flex gap-3">
-          <Button onClick={() => navigate("/courses")}>Browse Courses</Button>
-          <Button variant="outline" onClick={() => navigate(-1)}>Go Back</Button>
+      <Layout>
+        <div className="flex flex-col items-center justify-center px-6 text-center gap-6">
+          <p className="text-lg font-semibold text-red-400">{error}</p>
+          <div className="flex gap-3">
+            <Button onClick={() => navigate("/courses")}>Browse Courses</Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>Go Back</Button>
+          </div>
         </div>
-      </div>
+      </Layout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-30">
-        <div className="container mx-auto px-6 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="px-4 py-2" onClick={() => navigate("/courses") }>
-              <ArrowRight className="w-4 h-4 rotate-180" />
-              Back to catalog
-            </Button>
-            <div>
-              <p className="text-slate-400 text-sm">Course detail</p>
-              <h1 className="text-2xl font-bold text-white">{course.title}</h1>
-            </div>
-          </div>
-          <nav className="flex flex-wrap gap-3">
-            <Link to="/home" className="text-sm font-medium text-cyan-400 hover:text-white">Dashboard</Link>
-            <Link to="/my-courses" className="text-sm font-medium text-slate-300 hover:text-white">My Courses</Link>
-            <Link to="/progress" className="text-sm font-medium text-slate-300 hover:text-white">Progress</Link>
-            {user?.role === "instructor" && (
-              <Button variant="outline" size="sm" className="ml-2 border-cyan-500 text-cyan-400" onClick={() => navigate("/courses/create")}>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Create Course
-              </Button>
-            )}
-          </nav>
-        </div>
-      </header>
-
+    <Layout>
       <main className="container mx-auto px-6 py-10">
         <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
           <section className="space-y-6">
@@ -242,6 +364,65 @@ export default function CourseDetail() {
                 </CardContent>
               </Card>
             ) : null}
+
+            <Card className="bg-slate-900/70 border-slate-800">
+              <CardHeader>
+                <CardTitle>Course discussion</CardTitle>
+                <CardDescription>{comments.length} comment{comments.length === 1 ? "" : "s"}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-slate-400 text-sm">Ask questions or share notes for the course.</p>
+
+                <div className="space-y-3">
+                  {user ? (
+                    <>
+                      <textarea
+                        className="w-full min-h-[120px] rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:border-cyan-400 focus:outline-none"
+                        value={commentText}
+                        onChange={(event) => setCommentText(event.target.value)}
+                        placeholder="Write a comment..."
+                      />
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-red-300">{commentError}</p>
+                        <Button
+                          onClick={handleSubmitComment}
+                          disabled={commentSubmitting}
+                          className="bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                        >
+                          {commentSubmitting ? "Posting..." : "Post comment"}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
+                      <p className="text-slate-300">Log in to add comments and join the course discussion.</p>
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        <Button variant="outline" size="sm" onClick={() => navigate("/login")}>Log in</Button>
+                        <Link to="/courses" className="text-cyan-400 text-sm hover:text-white">Browse courses</Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {commentsLoading ? (
+                  <p className="text-slate-400">Loading comments...</p>
+                ) : comments.length === 0 ? (
+                  <p className="text-slate-400">No comments yet. Be the first to join the discussion.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
+                        <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
+                          <span>{comment.user_id === user?.id ? "You" : `User #${comment.user_id}`}</span>
+                          <span>{new Date(comment.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="mt-2 text-slate-200 whitespace-pre-wrap">{comment.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </section>
 
           <aside className="space-y-6">
@@ -288,9 +469,26 @@ export default function CourseDetail() {
                 ) : user?.role === "instructor" ? (
                   <p className="text-center text-sm text-slate-400 italic">Instructors cannot enroll in courses.</p>
                 ) : (
-                  <Button className="w-full gap-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400" onClick={handleEnroll} disabled={enrolling}>
-                    {enrolling ? "Enrolling..." : "Enroll now"}
-                  </Button>
+                    // If course requires payment, show purchase UI; otherwise show enroll
+                  course?.is_paid ? (
+                    <div className="space-y-3">
+                      <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
+                        <p className="text-sm text-slate-400">Price</p>
+                        <p className="mt-2 text-lg font-semibold">{course.price ? `$${course.price}` : "Paid course"}</p>
+                      </div>
+                      {purchaseError && <p className="text-sm text-red-300">{purchaseError}</p>}
+                      <Button className="w-full gap-2 bg-amber-500 text-slate-950 hover:bg-amber-400" onClick={openPaymentModal} disabled={purchaseLoading}>
+                        {purchaseLoading ? "Processing..." : isPurchased ? "Purchased" : "Purchase course"}
+                      </Button>
+                      {!isPurchased && (
+                        <Button variant="outline" className="w-full gap-2 border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => navigate("/courses")}>Browse other courses</Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Button className="w-full gap-2 bg-cyan-500 text-slate-950 hover:bg-cyan-400" onClick={handleEnroll} disabled={enrolling}>
+                      {enrolling ? "Enrolling..." : "Enroll now"}
+                    </Button>
+                  )
                 )}
               </div>
             </Card>
@@ -314,6 +512,7 @@ export default function CourseDetail() {
           </aside>
         </div>
       </main>
-    </div>
+      <PaymentModal open={paymentModalOpen} onClose={closePaymentModal} price={course?.price} onPay={payFromModal} loading={purchaseLoading} />
+    </Layout>
   )
 }

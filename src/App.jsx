@@ -20,6 +20,9 @@ import Admin from "./pages/Admin"
 import CourseStudents from "./pages/CourseStudents"
 import ForgotPassword from "./pages/ForgotPassword"
 import ResetPassword from "./pages/ResetPassword"
+import Leaderboard from "./pages/Leaderboard"
+import Payments from "./pages/Payments"
+import OrganizationManagement from "./pages/OrganizationManagement"
 
 function App() {
   return (
@@ -48,6 +51,9 @@ function App() {
         <Route path="/progress" element={<Progress />} />
         <Route path="/certificates" element={<Certificates />} />
         <Route path="/ai" element={<AIAssistant />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/payments" element={<Payments />} />
+        <Route path="/organizations" element={<OrganizationManagement />} />
         <Route path="/admin" element={<Admin />} />
 
         {/* Fallback */}

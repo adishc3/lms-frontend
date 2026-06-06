@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Users, Brain, ClipboardList } from "lucide-react"
+import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Users, Brain, ClipboardList, Trophy, CreditCard, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState(null)
+  const [locale, setLocale] = useState("en")
 
   useEffect(() => {
     const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
@@ -15,6 +16,8 @@ export default function Layout({ children }) {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setUser(data) })
       .catch(() => {})
+    const stored = localStorage.getItem("locale") || navigator.language?.slice(0,2) || "en"
+    setLocale(stored)
   }, [])
 
   const handleLogout = () => {
@@ -23,24 +26,31 @@ export default function Layout({ children }) {
     navigate("/login")
   }
 
-  const navLinks = [
+  const primaryLinks = [
     { label: "Dashboard", path: "/home", icon: BarChart2 },
-    ...(user?.role === "student" ? [
-      { label: "Courses", path: "/courses", icon: BookOpen },
-      { label: "My Courses", path: "/my-courses", icon: ClipboardList },
-      { label: "Progress", path: "/progress", icon: BarChart2 },
-      { label: "Certificates", path: "/certificates", icon: Award },
-      { label: "AI Assistant", path: "/ai", icon: Brain },
-    ] : []),
-    ...(user?.role === "instructor" ? [
-      { label: "My Courses", path: "/my-courses", icon: BookOpen },
-    ] : []),
-    ...(user?.role === "admin" ? [
-      { label: "Admin", path: "/admin", icon: Users },
-    ] : []),
+    { label: "Courses", path: "/courses", icon: BookOpen },
+    { label: "My Courses", path: "/my-courses", icon: ClipboardList },
+    { label: "Progress", path: "/progress", icon: BarChart2 },
   ]
 
+  const secondaryLinks = []
+  if (user?.role === "student") {
+    secondaryLinks.push({ label: "Certificates", path: "/certificates", icon: Award })
+    secondaryLinks.push({ label: "AI Assistant", path: "/ai", icon: Brain })
+    secondaryLinks.push({ label: "Leaderboard", path: "/leaderboard", icon: Trophy })
+    secondaryLinks.push({ label: "Payments", path: "/payments", icon: CreditCard })
+  }
+  if (user?.role === "instructor") {
+    secondaryLinks.push({ label: "Leaderboard", path: "/leaderboard", icon: Trophy })
+  }
+  if (user?.role === "admin") {
+    secondaryLinks.push({ label: "Admin", path: "/admin", icon: Users })
+    secondaryLinks.push({ label: "Organizations", path: "/organizations", icon: Users })
+    secondaryLinks.push({ label: "Leaderboard", path: "/leaderboard", icon: Trophy })
+  }
+
   const isActive = (path) => location.pathname === path
+  const [showMore, setShowMore] = useState(false)
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -52,20 +62,48 @@ export default function Layout({ children }) {
           </div>
 
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ label, path, icon: Icon }) => (
+            {primaryLinks.map(({ label, path, icon: Icon }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive(path)
                     ? "bg-slate-800 text-[#60A5FA]"
                     : "text-slate-400 hover:text-white hover:bg-slate-800/50"
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                {label}
+                <span className="hidden lg:inline">{label}</span>
               </button>
             ))}
+
+            {secondaryLinks.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMore((s) => !s)}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                  <span className="hidden lg:inline">More</span>
+                </button>
+                {showMore && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg bg-slate-900 border border-slate-800 shadow-lg z-40">
+                    <div className="flex flex-col p-2">
+                      {secondaryLinks.map(({ label, path, icon: Icon }) => (
+                        <button
+                          key={path}
+                          onClick={() => { setShowMore(false); navigate(path) }}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800/50 rounded"
+                        >
+                          <Icon className="w-4 h-4" />
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -80,6 +118,15 @@ export default function Layout({ children }) {
                 {(user?.full_name?.[0] || user?.email?.[0] || "U").toUpperCase()}
               </span>
             </div>
+            <select
+              value={locale}
+              onChange={(e) => { setLocale(e.target.value); localStorage.setItem("locale", e.target.value); window.location.reload(); }}
+              className="hidden sm:inline rounded-lg bg-slate-800 border border-slate-700 text-slate-300 px-2 py-1 mr-2"
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </select>
+
             <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-700 text-slate-400 hover:text-white gap-1.5">
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign out</span>

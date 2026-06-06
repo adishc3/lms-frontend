@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Image, Video, Music, Download, X } from "lucide-react"
+import apiFetch from "@/lib/api"
 
 export default function LessonDetail() {
   const { courseId, lessonId } = useParams()
@@ -15,6 +16,12 @@ export default function LessonDetail() {
   const [completed, setCompleted] = useState(false)
   const [isInstructor, setIsInstructor] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [comments, setComments] = useState([])
+  const [commentText, setCommentText] = useState("")
+  const [commentSubmitting, setCommentSubmitting] = useState(false)
+  const [commentError, setCommentError] = useState("")
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [user, setUser] = useState(null)
 
   const getFileIcon = (resourceType) => {
     if (!resourceType) return <FileText className="w-4 h-4" />
@@ -50,6 +57,7 @@ export default function LessonDetail() {
         const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
         if (meRes.ok) {
           const meData = await meRes.json()
+          setUser(meData)
           setIsInstructor((meData.role || "").toLowerCase() === "instructor" || (meData.role || "").toLowerCase() === "admin")
         }
 
@@ -71,6 +79,8 @@ export default function LessonDetail() {
           const progressData = await progressRes.json()
           setCompleted(Array.isArray(progressData.completed_lessons) && progressData.completed_lessons.includes(Number(lessonId)))
         }
+
+        await loadComments(token)
       } catch (err) {
         setError(err.message || "Unable to load lesson")
       } finally {
@@ -123,6 +133,49 @@ export default function LessonDetail() {
       setError(err.message || "Failed to delete file")
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const loadComments = async () => {
+    setCommentsLoading(true)
+    try {
+      const response = await apiFetch(`/api/comments/lesson/${lessonId}`)
+      if (!response.ok) {
+        return
+      }
+      const data = await response.json()
+      setComments(data)
+    } catch {
+      // Keep page usable if comment fetching fails.
+    } finally {
+      setCommentsLoading(false)
+    }
+  }
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim()) {
+      setCommentError("Please enter a comment before submitting.")
+      return
+    }
+
+    setCommentSubmitting(true)
+    setCommentError("")
+    try {
+      const response = await apiFetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ course_id: Number(courseId), lesson_id: Number(lessonId), content: commentText.trim() }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || "Unable to post comment")
+      }
+      setComments((prev) => [data, ...prev])
+      setCommentText("")
+    } catch (err) {
+      setCommentError(err.message || "Unable to post comment")
+    } finally {
+      setCommentSubmitting(false)
     }
   }
 
@@ -221,6 +274,52 @@ export default function LessonDetail() {
             ) : null}
           </div>
           {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+        </Card>
+
+        <Card className="bg-slate-900/80 border-slate-800">
+          <CardHeader>
+            <CardTitle>Discussion</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-slate-400 text-sm">Share questions or notes for this lesson.</p>
+
+            <div className="space-y-3">
+              <textarea
+                className="w-full min-h-[120px] rounded-3xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 focus:border-cyan-400 focus:outline-none"
+                value={commentText}
+                onChange={(event) => setCommentText(event.target.value)}
+                placeholder="Write a comment..."
+              />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-red-300">{commentError}</p>
+                <Button
+                  onClick={handleSubmitComment}
+                  disabled={commentSubmitting}
+                  className="bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                >
+                  {commentSubmitting ? "Posting..." : "Post comment"}
+                </Button>
+              </div>
+            </div>
+
+            {commentsLoading ? (
+              <p className="text-slate-400">Loading comments...</p>
+            ) : comments.length === 0 ? (
+              <p className="text-slate-400">No comments yet. Be the first to start the discussion.</p>
+            ) : (
+              <div className="space-y-3">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
+                      <span>{comment.user_id === user?.id ? "You" : `User #${comment.user_id}`}</span>
+                      <span>{new Date(comment.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="mt-2 text-slate-200 whitespace-pre-wrap">{comment.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>
