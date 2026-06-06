@@ -23,22 +23,53 @@ export default function Payments() {
     const fetchPayments = async () => {
       setLoading(true)
       setError("")
+      const extractMessage = async (res) => {
+        // Try JSON first
+        try {
+          const json = await res.json()
+          if (!json) return "Unable to load payments"
+          if (typeof json === 'string') return json
+          if (json.detail) return typeof json.detail === 'object' ? JSON.stringify(json.detail) : String(json.detail)
+          if (json.message) return typeof json.message === 'object' ? JSON.stringify(json.message) : String(json.message)
+          return JSON.stringify(json)
+        } catch (_) {
+          // Fallback to text
+          try {
+            const text = await res.text()
+            return text || "Unable to load payments"
+          } catch (_) {
+            return "Unable to load payments"
+          }
+        }
+      }
+
       try {
         const response = await apiFetch("/api/courses/payments", {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
-          throw new Error(data.detail || data.message || "Unable to load payments")
+          const msg = await extractMessage(response)
+          throw new Error(msg)
         }
-        const data = await response.json()
+
+        let data
+        try {
+          data = await response.json()
+        } catch (e) {
+          // If the server returned empty or non-JSON success body, treat as empty list
+          console.warn('Payments: response.json() failed, falling back to empty array', e)
+          data = []
+        }
+
         // merge with locally simulated payments (for dummy flows)
         const local = JSON.parse(localStorage.getItem("simulated_payments") || "[]")
         const merged = [...(data || []), ...local]
         setPayments(merged)
       } catch (err) {
         console.error(err)
-        setError(err.message || "Failed to load payments")
+        // err may be non-Error
+        const message = err && err.message ? err.message : String(err)
+        setError(message || "Failed to load payments")
       } finally {
         setLoading(false)
       }
@@ -84,22 +115,31 @@ export default function Payments() {
               <Card key={payment.id} className="bg-slate-900/50 border-slate-800">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between gap-4">
-                    <span>Course #{payment.course_id}</span>
-                    <span className="text-sm text-slate-400">{new Date(payment.created_at).toLocaleDateString()}</span>
+                    <span>Course #{String(payment.course_id)}</span>
+                    <span className="text-sm text-slate-400">{
+                      (() => {
+                        try {
+                          if (!payment.created_at) return ""
+                          if (typeof payment.created_at === "string") return new Date(payment.created_at).toLocaleDateString()
+                          // payment.created_at might be an object (safeguard)
+                          return String(payment.created_at)
+                        } catch { return String(payment.created_at) }
+                      })()
+                    }</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-3 sm:grid-cols-3">
                   <div>
                     <p className="text-sm text-slate-400">Amount</p>
-                    <p className="text-white text-lg font-semibold">{payment.currency} {payment.amount}</p>
+                    <p className="text-white text-lg font-semibold">{(payment.currency && typeof payment.currency === 'object') ? JSON.stringify(payment.currency) : String(payment.currency)} {(payment.amount !== undefined && payment.amount !== null) ? String(payment.amount) : ""}</p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Status</p>
-                    <p className="text-lg font-semibold text-green-300">{payment.status}</p>
+                    <p className="text-lg font-semibold text-green-300">{typeof payment.status === 'object' ? JSON.stringify(payment.status) : String(payment.status)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Payment ID</p>
-                    <p className="text-sm text-slate-200">{payment.id}</p>
+                    <p className="text-sm text-slate-200">{String(payment.id)}</p>
                   </div>
                 </CardContent>
                 <CardContent className="pt-0">
