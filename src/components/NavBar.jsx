@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,15 +58,24 @@ const DropdownItem = ({ href = "#", children, icon }) => (
   </a>
 );
 
-export default function NavBar() {
+export default function NavBar({ brand = "BeginnerLMS", navLinks = [], rightContent = null }) {
   const navigate = useNavigate();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // simple scroll watcher — keep minimal to avoid extra hooks
-  if (typeof window !== "undefined") {
-    window.addEventListener('scroll', () => setIsScrolled(window.scrollY > 10));
-  }
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const defaultLinks = [
+    { label: "Courses", hasDropdown: true },
+    { label: "Dashboard", path: "/home" },
+    { label: "Pricing", path: "#" },
+  ];
+
+  const links = navLinks.length ? navLinks : defaultLinks;
 
   return (
     <motion.header
@@ -77,30 +86,47 @@ export default function NavBar() {
         <nav className="flex justify-between items-center max-w-screen-xl mx-auto h-[70px]">
             <div className="flex items-center flex-shrink-0 cursor-pointer" onClick={() => navigate("/")}>
                 <ShieldCheck className="w-8 h-8 text-[#60A5FA]" />
-                <span className="text-xl font-bold text-white ml-2">BeginnerLMS</span>
+                <span className="text-xl font-bold text-white ml-2">{brand}</span>
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-                <div className="relative" onMouseEnter={() => setOpenDropdown('courses')} onMouseLeave={() => setOpenDropdown(null)}>
-                      <NavLink hasDropdown>Courses</NavLink>
+              {links.map((link) => {
+                if (link.hasDropdown) {
+                  return (
+                    <div key={link.label} className="relative" onMouseEnter={() => setOpenDropdown('courses')} onMouseLeave={() => setOpenDropdown(null)}>
+                      <NavLink hasDropdown>{link.label}</NavLink>
                       <DropdownMenu isOpen={openDropdown === 'courses'}>
                           <DropdownItem icon={<ArrowRight className="w-4 h-4" />}>Web Development</DropdownItem>
-                        <DropdownItem icon={<ArrowRight className="w-4 h-4" />}>Data Science</DropdownItem>
-                        <DropdownItem icon={<ArrowRight className="w-4 h-4" />}>UI/UX Design</DropdownItem>
-                    </DropdownMenu>
-                  </div>
-                <NavLink onClick={() => navigate("/home")}>Dashboard</NavLink>
-                <NavLink>Pricing</NavLink>
-              </div>
+                          <DropdownItem icon={<ArrowRight className="w-4 h-4" />}>Data Science</DropdownItem>
+                          <DropdownItem icon={<ArrowRight className="w-4 h-4" />}>UI/UX Design</DropdownItem>
+                      </DropdownMenu>
+                    </div>
+                  );
+                }
+
+                return (
+                  <NavLink
+                    key={link.label}
+                    onClick={() => link.path ? navigate(link.path) : undefined}
+                  >
+                    {link.label}
+                  </NavLink>
+                );
+              })}
+            </div>
 
             <div className="flex items-center space-x-4">
-                <NavLink onClick={() => navigate("/login")} className="hidden md:inline-block">Sign in</NavLink>
-              <Button
-                    onClick={() => navigate("/signup")}
-                    className="bg-[#60A5FA] text-[#111111] hover:bg-[#60A5FA]/90 font-semibold rounded-md px-6"
-                >
+                {rightContent || (
+                  <>
+                    <NavLink onClick={() => navigate("/login")} className="hidden md:inline-block">Sign in</NavLink>
+                    <Button
+                        onClick={() => navigate("/signup")}
+                        className="bg-[#60A5FA] text-[#111111] hover:bg-[#60A5FA]/90 font-semibold rounded-md px-6"
+                    >
                       Get Started
-                  </Button>
+                    </Button>
+                  </>
+                )}
             </div>
         </nav>
     </motion.header>

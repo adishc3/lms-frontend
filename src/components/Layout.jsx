@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Users, Brain, ClipboardList, Trophy, CreditCard, MoreHorizontal } from "lucide-react"
+import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Users, Brain, ClipboardList, Trophy, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import NavBar from "@/components/NavBar"
 
 export default function Layout({ children }) {
   const navigate = useNavigate()
@@ -49,63 +50,34 @@ export default function Layout({ children }) {
     secondaryLinks.push({ label: "Leaderboard", path: "/leaderboard", icon: Trophy })
   }
 
-  const isActive = (path) => location.pathname === path
-  const [showMore, setShowMore] = useState(false)
+  const navLinks = [
+    { label: "Dashboard", path: "/home" },
+    { label: "Courses", path: "/courses" },
+    { label: "My Courses", path: "/my-courses" },
+    { label: "Progress", path: "/progress" },
+  ]
+
+  if (user?.role === "student") {
+    navLinks.push({ label: "Certificates", path: "/certificates" })
+    navLinks.push({ label: "AI Assistant", path: "/ai" })
+    navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
+    navLinks.push({ label: "Payments", path: "/payments" })
+  }
+  if (user?.role === "instructor") {
+    navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
+  }
+  if (user?.role === "admin") {
+    navLinks.push({ label: "Admin", path: "/admin" })
+    navLinks.push({ label: "Organizations", path: "/organizations" })
+    navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/home")}>
-            <ShieldCheck className="w-7 h-7 text-[#60A5FA]" />
-            <span className="text-xl font-bold">Learn@will</span>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-1">
-            {primaryLinks.map(({ label, path, icon: Icon }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(path)
-                    ? "bg-slate-800 text-[#60A5FA]"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="hidden lg:inline">{label}</span>
-              </button>
-            ))}
-
-            {secondaryLinks.length > 0 && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowMore((s) => !s)}
-                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50"
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                  <span className="hidden lg:inline">More</span>
-                </button>
-                {showMore && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg bg-slate-900 border border-slate-800 shadow-lg z-40">
-                    <div className="flex flex-col p-2">
-                      {secondaryLinks.map(({ label, path, icon: Icon }) => (
-                        <button
-                          key={path}
-                          onClick={() => { setShowMore(false); navigate(path) }}
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800/50 rounded"
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span>{label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </nav>
-
+            <NavBar
+        brand="Learn@will"
+        navLinks={navLinks}
+        rightContent={(
           <div className="flex items-center gap-3">
             {user && (
               <div className="hidden sm:flex flex-col items-end">
@@ -126,14 +98,13 @@ export default function Layout({ children }) {
               <option value="en">English</option>
               <option value="es">Español</option>
             </select>
-
             <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-700 text-slate-400 hover:text-white gap-1.5">
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign out</span>
             </Button>
           </div>
-        </div>
-      </header>
+        )}
+      />
 
       <main className="container mx-auto px-6 py-8">
         {children}
@@ -141,3 +112,4 @@ export default function Layout({ children }) {
     </div>
   )
 }
+
