@@ -40,7 +40,7 @@ export default function LessonDetail() {
     const loadData = async () => {
       const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
       try {
-        const courseRes = await fetch(`/api/courses/${courseId}`)
+        const courseRes = await apiFetch(`/api/courses/${courseId}`)
         if (!courseRes.ok) {
           const data = await courseRes.json()
           throw new Error(data.detail || data.message || "Course not found")
@@ -54,16 +54,14 @@ export default function LessonDetail() {
         }
 
         // Check if current user is instructor or admin
-        const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        const meRes = await apiFetch("/api/auth/me")
         if (meRes.ok) {
           const meData = await meRes.json()
           setUser(meData)
           setIsInstructor((meData.role || "").toLowerCase() === "instructor" || (meData.role || "").toLowerCase() === "admin")
         }
 
-        const lessonRes = await fetch(`/api/courses/${courseId}/lessons/${lessonId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const lessonRes = await apiFetch(`/api/courses/${courseId}/lessons/${lessonId}`)
         if (!lessonRes.ok) {
           const data = await lessonRes.json()
           throw new Error(data.detail || data.message || "You must enroll to view this lesson.")
@@ -72,9 +70,7 @@ export default function LessonDetail() {
         const lessonData = await lessonRes.json()
         setLesson(lessonData)
 
-        const progressRes = await fetch(`/api/courses/${courseId}/progress`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const progressRes = await apiFetch(`/api/courses/${courseId}/progress`)
         if (progressRes.ok) {
           const progressData = await progressRes.json()
           setCompleted(Array.isArray(progressData.completed_lessons) && progressData.completed_lessons.includes(Number(lessonId)))
@@ -95,10 +91,8 @@ export default function LessonDetail() {
     setCompleting(true)
     setError("")
     try {
-      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
-      const response = await fetch(`/api/courses/${courseId}/lessons/${lessonId}/complete`, {
+      const response = await apiFetch(`/api/courses/${courseId}/lessons/${lessonId}/complete`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
       })
       const data = await response.json()
       if (!response.ok) {
@@ -118,10 +112,8 @@ export default function LessonDetail() {
     setDeleting(true)
     setError("")
     try {
-      const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
-      const response = await fetch(`/api/courses/${courseId}/lessons/${lessonId}/asset`, {
+      const response = await apiFetch(`/api/courses/${courseId}/lessons/${lessonId}/asset`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       })
       if (!response.ok) {
         const data = await response.json()
