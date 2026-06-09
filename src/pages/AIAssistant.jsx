@@ -6,6 +6,25 @@ import Layout from "@/components/Layout"
 import { Brain, Send, Sparkles, BookOpen, Loader2 } from "lucide-react"
 import apiFetch from "@/lib/api"
 
+// Retry logic with exponential backoff for API calls
+const fetchWithRetry = async (url, options, maxRetries = 3) => {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await apiFetch(url, options)
+      if (res.status === 503 && attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 1000 // 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+      return res
+    } catch (err) {
+      if (attempt === maxRetries - 1) throw err
+      const delay = Math.pow(2, attempt) * 1000
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+}
+
 export default function AIAssistant() {
   const navigate = useNavigate()
   const [courses, setCourses] = useState([])
@@ -59,13 +78,18 @@ useEffect(() => {
     setAnswer("")
     setLoading(true)
     try {
-      const res = await apiFetch("/api/ai/study-assistant", {
+      const res = await fetchWithRetry("/api/ai/study-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ lesson_id: Number(selectedLesson), question }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || "AI request failed")
+      if (!res.ok) {
+        if (res.status === 503) {
+          throw new Error("AI service temporarily overloaded. Please try again in a moment.")
+        }
+        throw new Error(data.detail || "AI request failed")
+      }
       setAnswer(data.answer)
     } catch (err) {
       setError(err.message)
@@ -81,13 +105,18 @@ useEffect(() => {
     setQuizResult("")
     setLoading(true)
     try {
-      const res = await apiFetch("/api/ai/quiz-generator", {
+      const res = await fetchWithRetry("/api/ai/quiz-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ lesson_id: Number(selectedLesson), question_count: questionCount }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || "Quiz generation failed")
+      if (!res.ok) {
+        if (res.status === 503) {
+          throw new Error("AI service temporarily overloaded. Please try again in a moment.")
+        }
+        throw new Error(data.detail || "Quiz generation failed")
+      }
       setQuizResult(data.quiz)
     } catch (err) {
       setError(err.message)
