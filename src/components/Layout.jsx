@@ -47,29 +47,32 @@ export default function Layout({ children }) {
   if (user?.role === "admin") {
     secondaryLinks.push({ label: "Admin", path: "/admin", icon: Users })
     secondaryLinks.push({ label: "Organizations", path: "/organizations", icon: Users })
-    secondaryLinks.push({ label: "Leaderboard", path: "/leaderboard", icon: Trophy })
   }
 
-  const navLinks = [
-    { label: "Dashboard", path: "/home" },
-    { label: "Courses", path: "/courses" },
-    { label: "My Courses", path: "/my-courses" },
-    { label: "Progress", path: "/progress" },
-  ]
-
-  if (user?.role === "student") {
-    navLinks.push({ label: "Certificates", path: "/certificates" })
-    navLinks.push({ label: "AI Assistant", path: "/ai" })
-    navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
-    navLinks.push({ label: "Payments", path: "/payments" })
-  }
-  if (user?.role === "instructor") {
-    navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
-  }
+  // Build navigation links - admins get a different menu
+  let navLinks = []
   if (user?.role === "admin") {
-    navLinks.push({ label: "Admin", path: "/admin" })
-    navLinks.push({ label: "Organizations", path: "/organizations" })
-    navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
+    navLinks = [
+      { label: "Admin Panel", path: "/admin" },
+      { label: "Organizations", path: "/organizations" },
+    ]
+  } else {
+    navLinks = [
+      { label: "Dashboard", path: "/home" },
+      { label: "Courses", path: "/courses" },
+      { label: "My Courses", path: "/my-courses" },
+      { label: "Progress", path: "/progress" },
+    ]
+
+    if (user?.role === "student") {
+      navLinks.push({ label: "Certificates", path: "/certificates" })
+      navLinks.push({ label: "AI Assistant", path: "/ai" })
+      navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
+      navLinks.push({ label: "Payments", path: "/payments" })
+    }
+    if (user?.role === "instructor") {
+      navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
+    }
   }
 
   return (
@@ -106,7 +109,7 @@ export default function Layout({ children }) {
         )}
       />
 
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-6 py-8 pt-[70px]">
         {children}
       </main>
     </div>

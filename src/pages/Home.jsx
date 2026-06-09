@@ -39,6 +39,12 @@ export default function Home() {
         const userData = await userRes.json()
         setUser(userData)
 
+        // Redirect admins to admin panel
+        if (userData.role === "admin") {
+          navigate("/admin")
+          return
+        }
+
         const notificationsRes = await apiFetch("/api/notifications")
         if (notificationsRes.ok) {
           setNotifications(await notificationsRes.json())
