@@ -4,10 +4,52 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import Layout from "@/components/Layout"
 import { WaveLoader } from "@/components/WaveLoader.jsx"
-import { Users, Shield, Download, Upload, Search, Edit2, Check, X, Activity } from "lucide-react"
+import { Users, Shield, Download, Upload, Search, Edit2, Check, X, Activity, BookOpen, GraduationCap, CreditCard, LogIn, Clock, Sparkles, Send } from "lucide-react"
 import apiFetch, { apiUrl } from "@/lib/api"
 
 const ROLES = ["student", "instructor", "admin"]
+
+// Helper function to get action styling and icon
+const getActionStyle = (action) => {
+  const actionMap = {
+    create_course: { icon: BookOpen, bg: "bg-blue-900/40", text: "text-blue-400", badge: "bg-blue-900/60 text-blue-200", label: "Course Created" },
+    enroll_course: { icon: LogIn, bg: "bg-green-900/40", text: "text-green-400", badge: "bg-green-900/60 text-green-200", label: "Course Enrolled" },
+    purchase_course: { icon: CreditCard, bg: "bg-yellow-900/40", text: "text-yellow-400", badge: "bg-yellow-900/60 text-yellow-200", label: "Course Purchased" },
+    complete_lesson: { icon: GraduationCap, bg: "bg-purple-900/40", text: "text-purple-400", badge: "bg-purple-900/60 text-purple-200", label: "Lesson Completed" },
+    list_users: { icon: Users, bg: "bg-slate-900/40", text: "text-slate-400", badge: "bg-slate-800/60 text-slate-200", label: "User List Viewed" },
+    read_user: { icon: Users, bg: "bg-slate-900/40", text: "text-slate-400", badge: "bg-slate-800/60 text-slate-200", label: "User Viewed" },
+    update_user: { icon: Users, bg: "bg-slate-900/40", text: "text-slate-400", badge: "bg-slate-800/60 text-slate-200", label: "User Updated" },
+    import_users: { icon: Upload, bg: "bg-indigo-900/40", text: "text-indigo-400", badge: "bg-indigo-900/60 text-indigo-200", label: "Users Imported" },
+    default: { icon: Activity, bg: "bg-slate-900/40", text: "text-slate-400", badge: "bg-slate-800/60 text-slate-200", label: "Activity" }
+  }
+  return actionMap[action] || actionMap.default
+}
+
+// Helper to format log details into human-readable text
+const getLogDescription = (log) => {
+  const action = log.action
+  let description = ""
+  
+  if (action === "create_course") {
+    description = "Created a new course"
+  } else if (action === "enroll_course") {
+    description = "Enrolled in a course"
+  } else if (action === "purchase_course") {
+    description = "Purchased a course"
+  } else if (action === "complete_lesson") {
+    description = "Completed a lesson"
+  } else if (action === "import_users") {
+    description = "Imported users from CSV"
+  } else if (action === "update_user") {
+    description = "Updated user details"
+  } else if (action === "read_user") {
+    description = "Viewed user details"
+  } else if (action === "list_users") {
+    description = "Viewed user list"
+  }
+  
+  return description
+}
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -15,7 +57,7 @@ export default function Admin() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [tab, setTab] = useState("users") // "users" | "logs"
+  const [tab, setTab] = useState("users") // "users" | "logs" | "ai"
   const [search, setSearch] = useState("")
   const [editingUser, setEditingUser] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -23,6 +65,9 @@ export default function Admin() {
   const [importFile, setImportFile] = useState(null)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
+  const [aiMessages, setAiMessages] = useState([])
+  const [aiInput, setAiInput] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
 
   const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
 
@@ -101,6 +146,42 @@ const loadData = useCallback(async () => {
     }
   }
 
+  const handleAiQuery = async (e) => {
+    e.preventDefault()
+    const query = aiInput.trim()
+    if (!query) return
+
+    const userMessage = { role: "user", content: query }
+    setAiMessages((prev) => [...prev, userMessage])
+    setAiInput("")
+    setAiLoading(true)
+
+    try {
+      const res = await apiFetch("/api/admin/ai-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ query }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.detail || data.error || "Failed to get AI insights")
+      }
+      if (!data.insight?.trim()) {
+        throw new Error("AI returned empty insight. Check backend logs or quota.")
+      }
+
+      const aiMessage = { role: "assistant", content: data.insight }
+      setAiMessages((prev) => [...prev, aiMessage])
+    } catch (err) {
+      const errorMessage = { role: "assistant", content: `Error: ${err.message}` }
+      setAiMessages((prev) => [...prev, errorMessage])
+      setError(err.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   const filteredUsers = users.filter((u) =>
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     (u.full_name || "").toLowerCase().includes(search.toLowerCase())
@@ -157,6 +238,7 @@ const loadData = useCallback(async () => {
           {[
             { id: "users", label: "Users", icon: Users },
             { id: "logs", label: "Activity Logs", icon: Activity },
+            { id: "ai", label: "AI Insights", icon: Sparkles },
             { id: "import", label: "Import CSV", icon: Upload },
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -280,29 +362,147 @@ const loadData = useCallback(async () => {
           <Card className="bg-slate-900/50 border-slate-800">
             <CardHeader>
               <CardTitle>Activity Logs</CardTitle>
-              <CardDescription>Recent admin actions in the system</CardDescription>
+              <CardDescription>Real-time system activity: courses, enrollments, lessons, purchases, and admin actions</CardDescription>
             </CardHeader>
             <CardContent>
               {logs.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">No activity logs yet.</p>
+                <div className="text-center py-12">
+                  <Activity className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+                  <p className="text-slate-400">No activity logs yet. Activities will appear here as users interact with the system.</p>
+                </div>
               ) : (
-                <div className="space-y-2">
-                  {logs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-950/50 border border-slate-800">
-                      <Activity className="w-4 h-4 text-[#60A5FA] mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm">{log.action}</span>
-                          <span className="text-xs text-slate-500">by user #{log.user_id}</span>
-                          {log.ip_address && <span className="text-xs text-slate-600">{log.ip_address}</span>}
+                <div className="space-y-3">
+                  {logs.map((log) => {
+                    const actionStyle = getActionStyle(log.action)
+                    const ActionIcon = actionStyle.icon
+                    const description = getLogDescription(log)
+                    const timestamp = new Date(log.created_at)
+                    const isToday = new Date().toDateString() === timestamp.toDateString()
+                    const timeString = isToday 
+                      ? timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : timestamp.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    
+                    return (
+                      <div key={log.id} className={`flex gap-4 p-4 rounded-xl border border-slate-700 ${actionStyle.bg} hover:border-slate-600 transition-colors`}>
+                        <div className={`p-2.5 rounded-lg ${actionStyle.text} bg-slate-950/50 shrink-0 flex items-center justify-center`}>
+                          <ActionIcon className="w-5 h-5" />
                         </div>
-                        {log.details && <p className="text-xs text-slate-500 mt-0.5">{log.details}</p>}
-                        <p className="text-xs text-slate-600 mt-0.5">{new Date(log.created_at).toLocaleString()}</p>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${actionStyle.badge} border border-slate-700`}>
+                                {actionStyle.label}
+                              </span>
+                              <span className="text-sm text-slate-300 font-medium">{description}</span>
+                            </div>
+                            <span className="text-xs text-slate-500 shrink-0 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {timeString}
+                            </span>
+                          </div>
+                          
+                          <div className="flex flex-col gap-1.5 text-xs text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500">By:</span>
+                              <span className="font-medium text-slate-300">{log.user_name || log.user_email}</span>
+                              <span className="text-slate-600">•</span>
+                              <span className="text-slate-500">ID: {log.user_id}</span>
+                            </div>
+                            {log.details && (
+                              <div className="mt-1 p-2 rounded bg-slate-950/40 border border-slate-800">
+                                <p className="text-slate-300 font-mono text-xs">{log.details}</p>
+                              </div>
+                            )}
+                            {log.ip_address && (
+                              <div className="text-slate-500">
+                                IP: <span className="text-slate-400 font-mono">{log.ip_address}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AI Insights tab */}
+        {tab === "ai" && (
+          <Card className="bg-slate-900/50 border-slate-800 flex flex-col h-[600px]">
+            <CardHeader className="border-b border-slate-800">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#60A5FA]" />
+                AI System Insights
+              </CardTitle>
+              <CardDescription>
+                Ask questions about user progress, courses, enrollments, and system activity
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
+              {/* Messages area */}
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                {aiMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-center">
+                    <div>
+                      <Sparkles className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                      <p className="text-slate-400 mb-2">No messages yet</p>
+                      <p className="text-sm text-slate-500">Try asking questions like:</p>
+                      <ul className="text-xs text-slate-600 mt-2 space-y-1">
+                        <li>• How many students completed the Python 101 course?</li>
+                        <li>• What courses did instructor John create?</li>
+                        <li>• Show me student progress summary</li>
+                        <li>• Which lessons have the highest completion rates?</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  aiMessages.map((msg, idx) => (
+                    <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        msg.role === "user" 
+                          ? "bg-[#60A5FA] text-slate-950 rounded-br-none" 
+                          : "bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700"
+                      }`}>
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {aiLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-slate-800 text-slate-100 px-4 py-2 rounded-lg rounded-bl-none border border-slate-700">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{animationDelay: "0s"}}></div>
+                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{animationDelay: "0.1s"}}></div>
+                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input area */}
+              <form onSubmit={handleAiQuery} className="flex gap-2 pt-4 border-t border-slate-800">
+                <input
+                  type="text"
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  placeholder="Ask about users, courses, progress..."
+                  disabled={aiLoading}
+                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 py-2 text-white text-sm outline-none focus:border-[#60A5FA] disabled:opacity-50"
+                />
+                <Button
+                  type="submit"
+                  disabled={aiLoading || !aiInput.trim()}
+                  className="gap-2 bg-[#60A5FA] hover:bg-[#60A5FA]/90"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
             </CardContent>
           </Card>
         )}

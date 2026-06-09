@@ -86,7 +86,7 @@ useEffect(() => {
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 503) {
-          throw new Error("AI service temporarily overloaded. Please try again in a moment.")
+          throw new Error("AI service is currently overloaded due to high demand. This is temporary. Please try again in a few moments.")
         }
         throw new Error(data.detail || "AI request failed")
       }
@@ -113,7 +113,7 @@ useEffect(() => {
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 503) {
-          throw new Error("AI service temporarily overloaded. Please try again in a moment.")
+          throw new Error("AI service is currently overloaded due to high demand. This is temporary. Please try again in a few moments.")
         }
         throw new Error(data.detail || "Quiz generation failed")
       }
