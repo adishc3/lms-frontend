@@ -58,7 +58,7 @@ const DropdownItem = ({ href = "#", children, icon }) => (
   </a>
 );
 
-export default function NavBar({ brand = "BeginnerLMS", navLinks = [], rightContent = null }) {
+export default function NavBar({ brand = "Learn@will", navLinks = [], rightContent = null }) {
   const navigate = useNavigate();
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);

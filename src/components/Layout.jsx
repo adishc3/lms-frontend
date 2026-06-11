@@ -64,13 +64,13 @@ export default function Layout({ children }) {
       { label: "Progress", path: "/progress" },
     ]
 
-    if (user?.role === "student") {
+  if (user?.role === "student") {
       navLinks.push({ label: "Certificates", path: "/certificates" })
       navLinks.push({ label: "AI Assistant", path: "/ai" })
       navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
       navLinks.push({ label: "Payments", path: "/payments" })
     }
-    if (user?.role === "instructor") {
+  if (user?.role === "instructor") {
       navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
     }
   }

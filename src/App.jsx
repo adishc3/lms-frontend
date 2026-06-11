@@ -8,6 +8,7 @@ import Courses from "./pages/Courses"
 import Progress from "./pages/Progress"
 import CourseDetail from "./pages/CourseDetail"
 import CreateCourse from "./pages/CreateCourse"
+import InstructorAICourseGenerator from "./pages/InstructorAICourseGenerator"
 import AddLesson from "./pages/AddLesson"
 import LessonDetail from "./pages/LessonDetail"
 import EditCourse from "./pages/EditCourse"
@@ -40,6 +41,7 @@ function App() {
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/courses" element={<Courses />} />
         <Route path="/courses/create" element={<CreateCourse />} />
+        <Route path="/courses/ai-generate" element={<InstructorAICourseGenerator />} />
         <Route path="/courses/:courseId" element={<CourseDetail />} />
         <Route path="/courses/:courseId/edit" element={<EditCourse />} />
         <Route path="/courses/:courseId/add-lesson" element={<AddLesson />} />

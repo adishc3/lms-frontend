@@ -100,6 +100,18 @@ export default function CreateCourse() {
   return (
     <div className="min-h-screen bg-slate-950 text-white px-4 py-10">
       <div className="container mx-auto max-w-3xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <h1 className="text-3xl font-bold">Create a new course</h1>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => navigate("/courses/ai-generate")}
+            className="whitespace-nowrap"
+          >
+            ✨ Use AI Assistant
+          </Button>
+        </div>
+
         <Card className="bg-slate-900/80 border-slate-800">
           <CardHeader>
             <CardTitle>Create a new course</CardTitle>
