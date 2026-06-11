@@ -68,18 +68,32 @@ export default function Admin() {
   const [aiMessages, setAiMessages] = useState([])
   const [aiInput, setAiInput] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
+  const [courses, setCourses] = useState([])
+  const [promptEdits, setPromptEdits] = useState({})
+  const [savingPromptId, setSavingPromptId] = useState(null)
 
   const token = localStorage.getItem("access_token") || sessionStorage.getItem("access_token")
 
 const loadData = useCallback(async () => {
      setLoading(true)
      try {
-       const [usersRes, logsRes] = await Promise.all([
+       const [usersRes, logsRes, coursesRes] = await Promise.all([
          apiFetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
          apiFetch("/api/admin/logs", { headers: { Authorization: `Bearer ${token}` } }),
+         apiFetch("/api/admin/courses", { headers: { Authorization: `Bearer ${token}` } }),
        ])
        if (usersRes.ok) setUsers(await usersRes.json())
        if (logsRes.ok) setLogs(await logsRes.json())
+       if (coursesRes.ok) {
+         const fetchedCourses = await coursesRes.json()
+         setCourses(fetchedCourses)
+         setPromptEdits(
+           fetchedCourses.reduce((acc, course) => ({
+             ...acc,
+             [course.id]: course.ai_system_prompt || "",
+           }), {})
+         )
+       }
      } catch {
        setError("Failed to load admin data")
      } finally {
@@ -143,6 +157,31 @@ const loadData = useCallback(async () => {
       setError(err.message)
     } finally {
       setImporting(false)
+    }
+  }
+
+  const saveCoursePrompt = async (courseId) => {
+    setSavingPromptId(courseId)
+    setError("")
+    setSuccess("")
+
+    try {
+      const res = await apiFetch(`/api/admin/courses/${courseId}/ai-prompt`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ai_system_prompt: promptEdits[courseId] || null }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Unable to save prompt")
+      }
+      setCourses((prev) => prev.map((course) => (course.id === courseId ? data : course)))
+      setSuccess(`Prompt saved successfully for "${data.title}"`)
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingPromptId(null)
     }
   }
 
@@ -238,6 +277,7 @@ const loadData = useCallback(async () => {
           {[
             { id: "users", label: "Users", icon: Users },
             { id: "logs", label: "Activity Logs", icon: Activity },
+            { id: "course-ai", label: "Course AI Prompts", icon: Sparkles },
             { id: "ai", label: "AI Insights", icon: Sparkles },
             { id: "import", label: "Import CSV", icon: Upload },
           ].map(({ id, label, icon: Icon }) => (
@@ -353,6 +393,87 @@ const loadData = useCallback(async () => {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Course AI Prompts tab */}
+        {tab === "course-ai" && (
+          <Card className="bg-slate-900/50 border-slate-800">
+            <CardHeader>
+              <CardTitle>Course AI Prompts</CardTitle>
+              <CardDescription>Manage per-course system prompts used by the AI tutor. Leave empty to use the default prompt.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {courses.length === 0 ? (
+                <div className="text-center py-12">
+                  <Sparkles className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400">No courses available yet. Create courses first, then add a prompt.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Helper section with examples */}
+                  <div className="mb-6 rounded-xl bg-slate-800/40 border border-slate-700 p-4">
+                    <h3 className="text-sm font-semibold text-slate-200 mb-3">Tips for Writing Effective Prompts</h3>
+                    <ul className="text-xs text-slate-400 space-y-2">
+                      <li><span className="text-slate-300">✓</span> Specify the exact course/topic name</li>
+                      <li><span className="text-slate-300">✓</span> Set clear boundaries on what the AI should answer</li>
+                      <li><span className="text-slate-300">✓</span> Include instructions to reject off-topic questions</li>
+                      <li><span className="text-slate-300">✓</span> Request the AI cite relevant lessons</li>
+                    </ul>
+                    <details className="mt-3 text-xs text-slate-400 cursor-pointer">
+                      <summary className="font-medium text-slate-300 hover:text-slate-100">View Example Prompts</summary>
+                      <div className="mt-2 space-y-2 text-slate-400">
+                        <p><span className="text-slate-300 font-medium">Example 1 (Generic):</span></p>
+                        <p className="pl-2 italic">You are an AI tutor for this course. Answer only questions about the course material provided. If a question is outside the course scope, explain that you can only help with this course's topics.</p>
+                        <p className="mt-3"><span className="text-slate-300 font-medium">Example 2 (Specific):</span></p>
+                        <p className="pl-2 italic">You are an expert Python programming tutor. Help students understand Python concepts covered in this course. Do not answer general programming questions outside this course. Always reference which lesson the answer comes from.</p>
+                      </div>
+                    </details>
+                  </div>
+
+                  {/* Course prompts */}
+                  <div className="space-y-4">
+                    {courses.map((course) => (
+                      <div key={course.id} className="rounded-3xl border border-slate-800 bg-slate-950/80 p-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-lg font-semibold text-white">{course.title}</p>
+                            <p className="text-sm text-slate-400">{course.description || "No description available."}</p>
+                          </div>
+                          <span className="text-xs uppercase tracking-wide text-slate-500">
+                            {course.is_paid ? "Paid course" : "Free course"}
+                          </span>
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="text-sm font-medium text-slate-200">AI system prompt</label>
+                          <textarea
+                            value={promptEdits[course.id] ?? ""}
+                            onChange={(e) => setPromptEdits((prev) => ({ ...prev, [course.id]: e.target.value }))}
+                            rows={5}
+                            className="mt-2 w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-[#60A5FA] focus:ring-2 focus:ring-[#60A5FA]/20"
+                            placeholder="Add a course-specific system prompt to keep AI answers aligned with this course. Leave empty to use default prompt."
+                          />
+                          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs text-slate-500">
+                              This prompt will be used whenever students ask questions in this course's lessons or chat.
+                            </p>
+                            <Button
+                              type="button"
+                              onClick={() => saveCoursePrompt(course.id)}
+                              disabled={savingPromptId === course.id}
+                              className="gap-2 bg-[#60A5FA] hover:bg-[#60A5FA]/90"
+                            >
+                              {savingPromptId === course.id ? "Saving..." : "Save prompt"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
