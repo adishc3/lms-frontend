@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { ShieldCheck, BookOpen, BarChart2, Award, LogOut, Users, Brain, ClipboardList, Trophy, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import NavBar from "@/components/NavBar"
+import { AITutorWidget } from "@/pages/AIAssistant"
 
 export default function Layout({ children }) {
   const navigate = useNavigate()
@@ -37,7 +38,6 @@ export default function Layout({ children }) {
   const secondaryLinks = []
   if (user?.role === "student") {
     secondaryLinks.push({ label: "Certificates", path: "/certificates", icon: Award })
-    secondaryLinks.push({ label: "AI Assistant", path: "/ai", icon: Brain })
     secondaryLinks.push({ label: "Leaderboard", path: "/leaderboard", icon: Trophy })
     secondaryLinks.push({ label: "Payments", path: "/payments", icon: CreditCard })
   }
@@ -66,7 +66,6 @@ export default function Layout({ children }) {
 
   if (user?.role === "student") {
       navLinks.push({ label: "Certificates", path: "/certificates" })
-      navLinks.push({ label: "AI Assistant", path: "/ai" })
       navLinks.push({ label: "Leaderboard", path: "/leaderboard" })
       navLinks.push({ label: "Payments", path: "/payments" })
     }
@@ -112,6 +111,8 @@ export default function Layout({ children }) {
       <main className="container mx-auto px-6 py-8 pt-[70px]">
         {children}
       </main>
+
+      {user?.role === "student" && <AITutorWidget />}
     </div>
   )
 }
